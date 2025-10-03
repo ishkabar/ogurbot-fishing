@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ogur.abstractions;
 
 
 namespace Ogur.Infrastructure.Input;
@@ -17,22 +18,19 @@ public sealed class Win32Input : IInput
     /// <param name="logger">Logger.</param>
     public Win32Input(ILogger<Win32Input> logger) => _logger = logger;
 
-    /// <summary>
-    /// Sends a single key tap asynchronously.
-    /// </summary>
-    /// <param name="key">Virtual key.</param>
-    public Task KeyTapAsync(VirtualKey key)
+    /// <inheritdoc />
+    public Task KeyPressAsync(ConsoleKey key, CancellationToken ct)
     {
-        _logger.LogInformation("KeyTap {Key}", key);
+        _logger.LogInformation("KeyPress {Key}", key);
+        // TODO: implement SendInput P/Invoke here
         return Task.CompletedTask;
     }
 
-    /// <summary>
-    /// Sends a single right mouse click asynchronously.
-    /// </summary>
-    public Task MouseRightClickAsync()
+    /// <inheritdoc />
+    public Task MouseClickAsync(int x, int y, CancellationToken ct)
     {
-        _logger.LogInformation("MouseRightClick");
+        _logger.LogInformation("MouseClick at {X},{Y}", x, y);
+        // TODO: implement mouse event P/Invoke here
         return Task.CompletedTask;
     }
 }

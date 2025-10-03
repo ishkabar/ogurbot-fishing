@@ -1,9 +1,11 @@
-﻿<Window x:Class="Bot.Host.Wpf.ShellWindow"
+﻿<Window x:Class="Ogur.Fishing.Host.Wpf.Views.ShellWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="OgurBot – Fishing Host" Height="640" Width="1100"
-        WindowStartupLocation="CenterScreen">
+        Title="Ogur Fishing" Width="1024" Height="720">
     <Grid>
-        <ContentControl x:Name="ContentHost" />
+        
+        <!-- Host for navigation; do not rename, code-behind registers this exact name -->
+
+        <ContentControl x:Name="PART_ContentHost" />
     </Grid>
 </Window>

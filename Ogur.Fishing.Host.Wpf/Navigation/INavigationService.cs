@@ -1,18 +1,26 @@
 ﻿using System;
 using System.Windows;
+using System.Windows.Controls;
+
 
 
 namespace Ogur.Fishing.Host.Wpf.Navigation;
 
 
 /// <summary>
-/// Navigation service for swapping views in the shell.
+/// Provides simple view navigation hosted inside a ContentControl.
 /// </summary>
 public interface INavigationService
 {
     /// <summary>
-    /// Navigates to target view instance.
+    /// Registers the target content host that will display navigated views.
     /// </summary>
-    /// <param name="view">View instance.</param>
-    void Navigate(FrameworkElement view);
+    /// <param name="host">Content control to host views.</param>
+    void RegisterHost(ContentControl host);
+
+    /// <summary>
+    /// Navigates to the specified view.
+    /// </summary>
+    /// <param name="view">Target view.</param>
+    void Navigate(UserControl view);
 }

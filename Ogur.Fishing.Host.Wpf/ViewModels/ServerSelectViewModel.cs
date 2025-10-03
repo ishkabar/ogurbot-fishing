@@ -1,52 +1,55 @@
 ﻿using System.Collections.ObjectModel;
 using System.Threading.Tasks;
+using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using Bot.Host.Wpf.Navigation;
-using Bot.Host.Wpf.Views;
+using Ogur.Fishing.Host.Wpf.Navigation;
+using Ogur.Fishing.Host.Wpf.Views;
 
 
 namespace Ogur.Fishing.Host.Wpf.ViewModels;
 
 
 /// <summary>
-/// Server selection and HWID check stub.
+/// ViewModel for the server selection screen.
 /// </summary>
 public sealed partial class ServerSelectViewModel : ObservableObject
 {
-    private readonly INavigationService _nav;
-    private readonly MainView _mainView;
+    /// <summary>
+    /// Occurs when a server has been chosen.
+    /// </summary>
+    public event EventHandler<ServerOption>? ServerChosen;
+
+    /// <summary>
+    /// Gets the list of available servers to choose from.
+    /// </summary>
+    public ObservableCollection<ServerOption> Servers { get; } = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerSelectViewModel"/> class.
     /// </summary>
-    /// <param name="nav">Navigation service.</param>
-    /// <param name="mainView">Main application view.</param>
-    public ServerSelectViewModel(INavigationService nav, MainView mainView)
+    public ServerSelectViewModel()
     {
-        _nav = nav;
-        _mainView = mainView;
-        Servers = new ObservableCollection<string> { "Metin2-Global", "Metin2-PL", "Private-Server-A" };
+        // For now hard-coded; later read from appsettings.json via IOptions<ServersOptions>.
+        Servers.Add(new ServerOption(
+            Id: "proxima",
+            Name: "Proxima",
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/proxima.png"));
+
+        Servers.Add(new ServerOption(
+            Id: "tamidia2",
+            Name: "Tamidia2 S2",
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/tamidia2.png"));
     }
 
     /// <summary>
-    /// Gets the list of servers.
+    /// Selects the specified server option and raises a notification.
     /// </summary>
-    public ObservableCollection<string> Servers { get; }
-
-    /// <summary>
-    /// Gets or sets the selected server.
-    /// </summary>
-    public string? SelectedServer { get; set; }
-
-    /// <summary>
-    /// Advances to the main window.
-    /// </summary>
-    public IAsyncRelayCommand ProceedCommand => new AsyncRelayCommand(ProceedAsync);
-
-    private Task ProceedAsync()
+    /// <param name="option">Server option selected by the user.</param>
+    [RelayCommand]
+    private void SelectServer(ServerOption option)
     {
-        _nav.Navigate(_mainView);
-        return Task.CompletedTask;
+        // TODO: persist selection via configuration (IOptions snapshot or a profile store).
+        ServerChosen?.Invoke(this, option);
     }
 }

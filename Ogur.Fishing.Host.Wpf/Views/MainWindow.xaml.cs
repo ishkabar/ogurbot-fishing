@@ -9,13 +9,17 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 
-namespace Ogur.Fishing.Host.Wpf;
+
+namespace Ogur.Fishing.Host.Wpf.Views;
 
 /// <summary>
-/// Interaction logic for MainWindow.xaml
+/// Main application window inheriting global-styled BaseWindow.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : BaseWindow
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MainWindow"/> class.
+    /// </summary>
     public MainWindow()
     {
         InitializeComponent();

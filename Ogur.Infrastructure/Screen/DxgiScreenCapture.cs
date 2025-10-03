@@ -1,13 +1,16 @@
 ﻿using System.Drawing;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using ogur.abstractions;
+using ogur.abstractions.Primitives;
 
 
 namespace Ogur.Infrastructure.Screen;
 
 
+
 /// <summary>
-/// DXGI-based screen capture stub.
+/// DXGI/BitBlt-based screen capture stub.
 /// </summary>
 public sealed class DxgiScreenCapture : IScreenCapture
 {
@@ -20,12 +23,17 @@ public sealed class DxgiScreenCapture : IScreenCapture
     public DxgiScreenCapture(ILogger<DxgiScreenCapture> logger) => _logger = logger;
 
     /// <summary>
-    /// Captures the screen to a bitmap asynchronously.
+    /// Captures a rectangular region of the screen.
     /// </summary>
-    /// <returns>Bitmap.</returns>
-    public Task<Bitmap> CaptureAsync()
+    /// <param name="region">Capture region in device pixels.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Raw image bytes (stubbed BGRA32 buffer).</returns>
+    public Task<byte[]> CaptureRegionAsync(CaptureRegion region, CancellationToken ct)
     {
-        _logger.LogDebug("Capture screen");
-        return Task.FromResult(new Bitmap(64, 64));
+        _logger.LogDebug("Capture region {X},{Y} {W}x{H}", region.X, region.Y, region.Width, region.Height);
+
+        var bytesPerPixel = 4;
+        var buffer = new byte[region.Width * region.Height * bytesPerPixel];
+        return Task.FromResult(buffer);
     }
 }

@@ -1,38 +1,35 @@
-﻿using System.Windows;
-using Bot.Host.Wpf.Navigation;
+﻿using System;
+using System.Windows;
+using System.Windows.Controls;
 using Microsoft.Extensions.DependencyInjection;
+using Ogur.Fishing.Host.Wpf.Navigation;
+using Ogur.Fishing.Host.Wpf.Views;
 
-namespace Ogur.Fishing.Host.Wpf;
+namespace Ogur.Fishing.Host.Wpf.Views;
 
 /// <summary>
-/// Shell window hosting navigation content.
+/// Main shell window hosting the navigation content.
 /// </summary>
 public partial class ShellWindow : Window
 {
-    /// <summary>
-    /// Gets the content host.
-    /// </summary>
-    public ContentControl ContentHost => ContentHostField;
-
     private readonly INavigationService _nav;
-    private readonly ServiceProvider _sp;
+    private readonly IServiceProvider _sp;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ShellWindow"/> class.
     /// </summary>
     /// <param name="nav">Navigation service.</param>
     /// <param name="sp">Service provider.</param>
-    public ShellWindow(INavigationService nav, ServiceProvider sp)
+    public ShellWindow(INavigationService nav, IServiceProvider sp)
     {
         InitializeComponent();
-        ContentHostField = (ContentControl)FindName("ContentHost")!;
         _nav = nav;
         _sp = sp;
-        ((NavigationService)_nav).RegisterShell(this);
 
+        _nav.RegisterHost(PART_ContentHost);
+
+        // Start screen: your existing LoginView
         var login = _sp.GetRequiredService<LoginView>();
         _nav.Navigate(login);
     }
-
-    private ContentControl ContentHostField { get; }
 }

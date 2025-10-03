@@ -1,12 +1,40 @@
-﻿<UserControl x:Class="Bot.Host.Wpf.Views.ServerSelectView"
+﻿<UserControl x:Class="Ogur.Fishing.Host.Wpf.Views.ServerSelectView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Grid Margin="24">
-        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="420">
-            <TextBlock Text="Select Server & Device" FontSize="22" FontWeight="Bold" Margin="0,0,0,12"/>
-            <ComboBox ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" Height="34"/>
-            <Button Content="Proceed" Height="38" Margin="0,12,0,0" Command="{Binding ProceedCommand}"/>
-            <TextBlock Text="HWID and licensing will be validated here in future." Opacity="0.6" Margin="0,12,0,0" />
-        </StackPanel>
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:vm="clr-namespace:Ogur.Fishing.Host.Wpf.ViewModels"
+             mc:Ignorable="d"
+             d:DataContext="{d:DesignInstance Type=vm:ServerSelectViewModel}">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Choose your server" FontSize="18" FontWeight="SemiBold"/>
+
+        <ItemsControl Grid.Row="2" ItemsSource="{Binding Servers}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate DataType="{x:Type vm:ServerOption}">
+                    <Button Padding="12" Margin="6"
+                            Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                            CommandParameter="{Binding}">
+                        <StackPanel>
+                            <Image Source="{Binding IconPath}" Width="96" Height="96"/>
+                            <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
+                        </StackPanel>
+                    </Button>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
     </Grid>
 </UserControl>

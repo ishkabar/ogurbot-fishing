@@ -9,8 +9,8 @@
     <PackageReference Include="Stateless" Version="5.2.0" />
     <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.1" />
-    <PackageReference Include="ogur.Abstractions" Version="0.1.0-alpha" />
-    <PackageReference Include="ogur.Core" Version="0.1.0-alpha" />
+    <PackageReference Include="Ogur.Abstractions" Version="0.1.0-alpha" />
+    <PackageReference Include="Ogur.Core" Version="0.1.0-alpha" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Ogur.Infrastructure\Ogur.Infrastructure.csproj" />
