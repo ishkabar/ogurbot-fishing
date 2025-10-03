@@ -1,0 +1,16 @@
+# build/IDE
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userprefs
+*.DS_Store
+
+# publish artefacts
+**/publish*/
+**/*publish*/**
+**/*.zip
+**/*.rar
+artifacts/
+logs/
