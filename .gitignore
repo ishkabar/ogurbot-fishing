@@ -15,3 +15,6 @@ obj/
 artifacts/
 logs/
 NUL
+CollectedCs/
+**/CollectedCs/
+*/CollectedCs/
