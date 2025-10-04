@@ -22,9 +22,29 @@
         </Grid.RowDefinitions>
 
         <!-- Title -->
-        <TextBlock Grid.ColumnSpan="2"
-                   Text="Fishing Capability"
-                   Style="{StaticResource TitleText}"/>
+        <TextBlock Text="Fishing Capability"
+                   Style="{StaticResource TitleText}"
+                   VerticalAlignment="Center" />
+
+        <!-- Pin toggle + opis -->
+        <StackPanel Grid.Column="1"
+                    Orientation="Horizontal"
+                    VerticalAlignment="Center"
+                    HorizontalAlignment="Right"
+                    Margin="12,0,0,0">
+
+            <ToggleButton Style="{StaticResource IconToggleButton}"
+                          IsChecked="{Binding RelativeSource={RelativeSource AncestorType=Window},
+                                          Path=Topmost,
+                                          Mode=TwoWay}"
+                          VerticalAlignment="Center"
+                          Margin="0,0,6,0"/>
+
+            <TextBlock Text="Always on top"
+                       Foreground="{StaticResource Brush.TextMuted}"
+                       FontSize="13"
+                       VerticalAlignment="Center" />
+        </StackPanel>
 
         <!-- Controls -->
         <Border Grid.Row="2"
@@ -127,10 +147,9 @@
                            Style="{StaticResource LabelText}"/>
 
                 <ComboBox Grid.Row="2" Grid.Column="2"
-                          Style="{StaticResource ComboBox.Dark}"
+                          Style="{StaticResource ComboBox.ShortSelected_FullDropdown}"
                           ItemsSource="{Binding Processes}"
                           SelectedItem="{Binding SelectedProcess}"
-                          DisplayMemberPath="Display"
                           MinWidth="320"
                           VerticalAlignment="Center"/>
 
@@ -141,16 +160,6 @@
                         Style="{StaticResource PrimaryButton}"
                         MinWidth="88"
                         Margin="8,0,0,0"
-                        VerticalAlignment="Center"/>
-
-                <!-- Hotkey -->
-                <TextBlock Grid.Row="4" Grid.Column="0" VerticalAlignment="Center" Text="Hotkey:" Style="{StaticResource LabelText}"/>
-                <TextBox Grid.Row="4" Grid.Column="2"
-                         Text="{Binding HotkeyText}" IsReadOnly="True" MinWidth="320" VerticalAlignment="Center"/>
-                <Button Grid.Row="4" Grid.Column="3"
-                        Command="{Binding ListenHotkeyCommand}"
-                        Content="Listen" Style="{StaticResource PrimaryButton}"
-                        MinWidth="88" Margin="8,0,0,0"
                         VerticalAlignment="Center"/>
 
                 <!-- Memory address -->
