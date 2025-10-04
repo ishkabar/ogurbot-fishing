@@ -2,6 +2,7 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net8.0-windows</TargetFramework>
+    <ApplicationIcon>Assets\ogur.ico</ApplicationIcon>
     <UseWPF>true</UseWPF>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
@@ -37,6 +38,8 @@
 
    <ItemGroup>
     <Resource Include="Assets\Servers\*.png" />
+    <None Remove="Assets\ogur.ico" />
+    <Resource Include="Assets\ogur.ico" />
   </ItemGroup>
 
    <ItemGroup>
