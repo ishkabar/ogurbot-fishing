@@ -4,6 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Ogur.Fishing.Host.Wpf.Navigation;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
+using Ogur.Fishing.Host.Wpf.Navigation;
+using Ogur.Fishing.Host.Wpf.Services;
+using Ogur.Fishing.Host.Wpf.Services.Models;
+using Ogur.Fishing.Host.Wpf.Views;
 using Ogur.Fishing.Host.Wpf.Views;
 
 
@@ -15,6 +21,9 @@ namespace Ogur.Fishing.Host.Wpf.ViewModels;
 /// </summary>
 public sealed partial class ServerSelectViewModel : ObservableObject
 {
+    private readonly ISessionState _session;
+    private readonly INavigationService _nav;
+    
     /// <summary>
     /// Occurs when a server has been chosen.
     /// </summary>
@@ -28,9 +37,10 @@ public sealed partial class ServerSelectViewModel : ObservableObject
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerSelectViewModel"/> class.
     /// </summary>
-    public ServerSelectViewModel()
+    public ServerSelectViewModel(ISessionState session, INavigationService nav)
     {
-        // For now hard-coded; later read from appsettings.json via IOptions<ServersOptions>.
+        _session = session;
+        _nav = nav;
         Servers.Add(new ServerOption(
             Id: "proxima",
             Name: "Proxima",
@@ -49,7 +59,8 @@ public sealed partial class ServerSelectViewModel : ObservableObject
     [RelayCommand]
     private void SelectServer(ServerOption option)
     {
-        // TODO: persist selection via configuration (IOptions snapshot or a profile store).
         ServerChosen?.Invoke(this, option);
+        _session.SelectedServer = option;
+        _nav.Show<MainView>();
     }
 }

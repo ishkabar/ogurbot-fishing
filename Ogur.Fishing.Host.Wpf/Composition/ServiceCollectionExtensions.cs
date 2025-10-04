@@ -8,9 +8,14 @@ using Ogur.Fishing.Host.Wpf.Services.Models;
 using Ogur.Fishing.Host.Wpf.ViewModels;
 using Ogur.Fishing.Host.Wpf.Views;
 using Ogur.Capabilities.Fishing;
+using Ogur.Abstractions;
+using Microsoft.Extensions.Options;
+
 
 
 namespace Ogur.Fishing.Host.Wpf.Composition;
+
+
 /// <summary>
 /// ServiceCollection extensions for WPF host composition and test stubs.
 /// </summary>
@@ -23,17 +28,16 @@ public static class ServiceCollectionExtensions
     /// <returns>The same collection.</returns>
     public static IServiceCollection AddWpfHost(this IServiceCollection services)
     {
-        // Domain/UI services used by MainViewModel
         services.AddSingleton<IBaitCatalog, BaitCatalog>();
         services.AddSingleton<IProcessQueryService, ProcessQueryService>();
         services.AddSingleton<IHotkeyListener, HotkeyListener>();
+        services.AddSingleton<ISessionState, SessionState>();
 
-        // ViewModels (singleton – trzymają stan sesji)
+
         services.AddSingleton<LoginViewModel>();
         services.AddSingleton<ServerSelectViewModel>();
-        services.AddSingleton<MainViewModel>(); // ← Twój rozbudowany VM zostaje
+        services.AddSingleton<MainViewModel>();
 
-        // Views (transient – można odświeżać bez utraty stanu VM)
         services.AddTransient<LoginView>();
         services.AddTransient<ServerSelectView>();
         services.AddTransient<MainView>();
@@ -44,13 +48,24 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Adds Fishing capability orchestration and its dependencies.
+    /// Registers null-proxy stubs for infrastructure interfaces and default options,
+    /// so MainViewModel → FishingCapability można poprawnie rozwiązać z DI.
     /// </summary>
     /// <param name="services">Service collection.</param>
     /// <returns>The same collection.</returns>
     public static IServiceCollection AddFishingCapabilityHost(this IServiceCollection services)
     {
-        // MVP: capability jako singleton. Jeśli docelowo będzie loader pluginów, to tu go podłączymy.
+        // Stubs for infra (no-op) – do czasu aż podłączysz realne implementacje.
+        AddNullProxy<IInput>(services);
+        AddNullProxy<IScreenCapture>(services);
+        AddNullProxy<IOcr>(services);
+
+        // Default options for FishingOptions (bind z appsettings dodasz później w Startup, jeśli chcesz).
+        services.AddSingleton<IOptions<FishingOptions>>(_ => Options.Create(new FishingOptions()));
+
+        // Capability itself.
         services.AddSingleton<FishingCapability>();
+
         return services;
     }
 
@@ -76,7 +91,7 @@ public static class ServiceCollectionExtensions
     /// DispatchProxy-based no-op proxy for interfaces.
     /// </summary>
     /// <typeparam name="T">Interface being proxied.</typeparam>
-    private sealed class NullInterfaceProxy<T> : DispatchProxy where T : class
+    private class NullInterfaceProxy<T> : DispatchProxy where T : class
     {
         /// <summary>
         /// Creates a new proxy instance implementing <typeparamref name="T"/>.

@@ -16,7 +16,7 @@ namespace Ogur.Fishing.Host.Wpf.Composition;
         /// <summary>
         /// Intercepts interface calls and returns default values for return types.
         /// </summary>
-        /// <param name="targetMethod">Invoked method info.</param>
+        /// <param name="targetMethod">Invoked method info.</param> 
         /// <param name="args">Invocation arguments.</param>
         /// <returns>Default value for the return type or a completed task.</returns>
         protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)

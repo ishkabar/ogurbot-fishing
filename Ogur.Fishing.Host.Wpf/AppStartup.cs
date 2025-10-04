@@ -2,6 +2,7 @@
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Ogur.Fishing.Host.Wpf.Composition;
 using Ogur.Fishing.Host.Wpf.Navigation;
 using Ogur.Fishing.Host.Wpf.Services;
 using Ogur.Fishing.Host.Wpf.ViewModels;
@@ -25,9 +26,12 @@ public static class AppStartup
         builder.Services.AddSingleton<INavigationService, NavigationService>();
         builder.Services.AddSingleton<IAppFlowCoordinator, AppFlowCoordinator>();
         builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
+        ServiceCollectionExtensions.AddWpfHost(builder.Services);
+        ServiceCollectionExtensions.AddFishingCapabilityHost(builder.Services);
 
         // Domain services (auth stub)
         builder.Services.AddSingleton<IAuthService, DummyAuthService>();
+
 
         // ViewModels
         builder.Services.AddTransient<LoginViewModel>();

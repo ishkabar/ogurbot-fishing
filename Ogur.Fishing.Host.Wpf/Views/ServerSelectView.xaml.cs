@@ -15,12 +15,19 @@ namespace Ogur.Fishing.Host.Wpf.Views;
 public partial class ServerSelectView : UserControl
 {
     /// <summary>
-    /// Initializes a new instance of the <see cref="ServerSelectView"/> class with its view model.
+    /// Initializes a new instance of the <see cref="ServerSelectView"/> class.
     /// </summary>
     /// <param name="vm">The server select view model resolved from DI.</param>
-    public ServerSelectView(ServerSelectViewModel vm)
+    /// <param name="nav">Navigation service used to display the main view.</param>
+    public ServerSelectView(ServerSelectViewModel vm, INavigationService nav)
     {
         InitializeComponent();
         DataContext = vm;
+
+        vm.ServerChosen += (_, __) =>
+        {
+            // Navigate to MainView when a server tile is clicked.
+            nav.Show<MainView>();
+        };
     }
 }
