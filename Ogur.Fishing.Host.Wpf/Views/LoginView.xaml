@@ -1,33 +1,61 @@
-﻿<UserControl x:Class="Ogur.Fishing.Host.Wpf.Views.LoginView"
+﻿<!-- File: Ogur.Fishing.Host.Wpf/Views/LoginView.xaml -->
+<!-- Project: Ogur.Fishing.Host.Wpf -->
+<!-- Namespace: Ogur.Fishing.Host.Wpf.Views -->
+<UserControl x:Class="Ogur.Fishing.Host.Wpf.Views.LoginView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:vm="clr-namespace:Ogur.Fishing.Host.Wpf.ViewModels"
+             xmlns:beh="clr-namespace:Ogur.Fishing.Host.Wpf.Views.Behaviors"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:LoginViewModel}">
-    <Grid Margin="16" MaxWidth="360">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="8"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="8"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="16"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+  <!-- Full-window center; card szeroka jak w screenie -->
+  <Grid>
+    <Grid.RowDefinitions>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="Auto"/>
+      <ColumnDefinition Width="*"/>
+    </Grid.ColumnDefinitions>
 
-        <TextBlock Text="Sign in" FontSize="18" FontWeight="SemiBold"/>
-        <StackPanel Grid.Row="2">
-            <TextBlock Text="Username"/>
-            <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}" />
+    <Border Grid.Row="1" Grid.Column="1" Style="{StaticResource Card}" MaxWidth="520">
+      <StackPanel>
+        <TextBlock Text="Sign in" Style="{StaticResource TitleText}"/>
+
+        <TextBlock Text="Username" Style="{StaticResource LabelText}"/>
+        <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged, ValidatesOnNotifyDataErrors=True}"/>
+
+        <TextBlock Text="Password" Style="{StaticResource LabelText}"/>
+        <PasswordBox beh:BindablePassword.Attach="True"
+                     beh:BindablePassword.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+
+        <TextBlock Margin="0,8,0,0"
+                   Foreground="{StaticResource Brush.Error}"
+                   Text="{Binding ErrorMessage}">
+          <TextBlock.Style>
+            <Style TargetType="TextBlock">
+              <Setter Property="Visibility" Value="Visible"/>
+              <Style.Triggers>
+                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+              </Style.Triggers>
+            </Style>
+          </TextBlock.Style>
+        </TextBlock>
+
+        <StackPanel Orientation="Horizontal" Margin="0,16,0,0" HorizontalAlignment="Right">
+          <Button Content="Sign in"
+                  Style="{StaticResource PrimaryButton}"
+                  Command="{Binding LoginCommand}"
+                  IsDefault="True"/>
         </StackPanel>
-        <StackPanel Grid.Row="4">
-            <TextBlock Text="Password"/>
-            <PasswordBox x:Name="PassBox"/>
-        </StackPanel>
-        <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="Continue" Padding="16,8" Click="OnContinue"/>
-        </StackPanel>
-    </Grid>
+      </StackPanel>
+    </Border>
+  </Grid>
 </UserControl>

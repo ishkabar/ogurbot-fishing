@@ -12,16 +12,14 @@ using System.Windows.Shapes;
 
 namespace Ogur.Fishing.Host.Wpf.Views;
 
+
 /// <summary>
-/// Main application window inheriting global-styled BaseWindow.
+/// Main application window displayed after successful login.
 /// </summary>
 public partial class MainWindow : BaseWindow
 {
     /// <summary>
     /// Initializes a new instance of the <see cref="MainWindow"/> class.
     /// </summary>
-    public MainWindow()
-    {
-        InitializeComponent();
-    }
+    public MainWindow() => InitializeComponent();
 }

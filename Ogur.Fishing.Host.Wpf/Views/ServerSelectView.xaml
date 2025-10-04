@@ -6,35 +6,47 @@
              xmlns:vm="clr-namespace:Ogur.Fishing.Host.Wpf.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:ServerSelectViewModel}">
-    <Grid Margin="16">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="12"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="12"/>
-            <RowDefinition Height="Auto"/>
-        </Grid.RowDefinitions>
+  <Grid Margin="24">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="6"/>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="16"/>
+      <RowDefinition Height="*"/>
+    </Grid.RowDefinitions>
 
-        <TextBlock Text="Choose your server" FontSize="18" FontWeight="SemiBold"/>
+    <TextBlock Text="Choose your server" Style="{StaticResource TitleText}"/>
+    <TextBlock Grid.Row="2" Text="Pick the server you play on." Style="{StaticResource MutedText}"/>
 
-        <ItemsControl Grid.Row="2" ItemsSource="{Binding Servers}">
-            <ItemsControl.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel />
-                </ItemsPanelTemplate>
-            </ItemsControl.ItemsPanel>
-            <ItemsControl.ItemTemplate>
-                <DataTemplate DataType="{x:Type vm:ServerOption}">
-                    <Button Padding="12" Margin="6"
-                            Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                            CommandParameter="{Binding}">
-                        <StackPanel>
-                            <Image Source="{Binding IconPath}" Width="96" Height="96"/>
-                            <TextBlock Text="{Binding Name}" HorizontalAlignment="Center" Margin="0,6,0,0"/>
-                        </StackPanel>
-                    </Button>
-                </DataTemplate>
-            </ItemsControl.ItemTemplate>
+    <Border Grid.Row="4" Style="{StaticResource Card}">
+      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <ItemsControl ItemsSource="{Binding Servers}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel IsItemsHost="True"/>
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          
+          <ItemsControl.ItemContainerStyle>
+            <Style TargetType="ContentPresenter">
+              <Setter Property="Margin" Value="10"/>
+            </Style>
+          </ItemsControl.ItemContainerStyle>
+
+          <ItemsControl.ItemTemplate>
+            <DataTemplate DataType="{x:Type vm:ServerOption}">
+              <Button Style="{StaticResource ServerCardButton}"
+                      Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                      CommandParameter="{Binding}"
+                      Tag="{Binding Name}">
+                <Image Source="{Binding IconPath}"
+                       Width="112" Height="112"
+                       Stretch="Uniform"/>
+              </Button>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
         </ItemsControl>
-    </Grid>
+      </ScrollViewer>
+    </Border>
+  </Grid>
 </UserControl>

@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <Folder Include="Assets\Servers\" />
+    <Folder Include="Views\Controls\" />
   </ItemGroup>
 
    <ItemGroup>

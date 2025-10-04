@@ -1,38 +1,65 @@
-﻿using System.Configuration;
-using System.Data;
-using System;
-using System.Windows;
+﻿using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
-using NLog.Extensions.Logging;
-using Ogur.Fishing.Host.Wpf.Navigation;
-using Ogur.Fishing.Host.Wpf.ViewModels;
 using Ogur.Fishing.Host.Wpf.Views;
-using Ogur.Fishing.Host.Wpf;
-using Ogur.Infrastructure.Input;
-using Ogur.Infrastructure.Screen;
-using Ogur.Infrastructure.Ocr;
-using ogur.abstractions;
-using ogur.abstractions.Primitives;
-using Ogur.Capabilities.Fishing;
+
 
 
 namespace Ogur.Fishing.Host.Wpf;
 
 /// <summary>
-/// WPF App.
+/// WPF application entry point that wires up the Host and shows the shell.
 /// </summary>
 public partial class App : Application
 {
     private IHost? _host;
 
-    /// <inheritdoc />
-    protected override void OnStartup(StartupEventArgs e)
+    /// <summary>
+    /// Builds the generic host with DI, logging and application services.
+    /// </summary>
+    /// <returns>Configured host instance.</returns>
+    private static IHost BuildHost()
+    {
+        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
+        AppStartup.Configure(builder);
+        return builder.Build();
+    }
+
+    /// <summary>
+    /// Handles application startup, creates the host, shows ShellWindow first, then starts background services.
+    /// </summary>
+    /// <param name="e">Startup event args.</param>
+    protected override async void OnStartup(StartupEventArgs e)
     {
         base.OnStartup(e);
-        _host = AppStartup.BuildHost();
-        AppStartup.Run(this, _host);
+
+        _host = BuildHost();
+        
+        var shell = _host.Services.GetRequiredService<ShellWindow>();
+        MainWindow = shell;
+        shell.Show();
+        
+        await _host.StartAsync().ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Handles application exit by stopping and disposing the host.
+    /// </summary>
+    /// <param name="e">Exit event args.</param>
+    protected override async void OnExit(ExitEventArgs e)
+    {
+        if (_host is not null)
+        {
+            try
+            {
+                await _host.StopAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+            }
+            finally
+            {
+                _host.Dispose();
+            }
+        }
+
+        base.OnExit(e);
     }
 }

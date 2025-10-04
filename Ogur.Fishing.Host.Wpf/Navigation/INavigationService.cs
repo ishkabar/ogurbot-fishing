@@ -8,19 +8,13 @@ namespace Ogur.Fishing.Host.Wpf.Navigation;
 
 
 /// <summary>
-/// Provides simple view navigation hosted inside a ContentControl.
+/// Provides view navigation within the shell window.
 /// </summary>
 public interface INavigationService
 {
     /// <summary>
-    /// Registers the target content host that will display navigated views.
+    /// Displays a view of the specified type inside the shell region.
     /// </summary>
-    /// <param name="host">Content control to host views.</param>
-    void RegisterHost(ContentControl host);
-
-    /// <summary>
-    /// Navigates to the specified view.
-    /// </summary>
-    /// <param name="view">Target view.</param>
-    void Navigate(UserControl view);
+    /// <typeparam name="TView">The WPF view type to display.</typeparam>
+    void Show<TView>() where TView : System.Windows.FrameworkElement;
 }

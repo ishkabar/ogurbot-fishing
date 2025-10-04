@@ -1,11 +1,11 @@
-﻿<Window x:Class="Ogur.Fishing.Host.Wpf.Views.ShellWindow"
-        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
-        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Ogur Fishing" Width="1024" Height="720">
+﻿<local:BaseWindow x:Class="Ogur.Fishing.Host.Wpf.Views.ShellWindow"
+                  xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                  xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                  xmlns:local="clr-namespace:Ogur.Fishing.Host.Wpf.Views"
+                  Style="{StaticResource BaseWindowStyle}"
+                  Title="Ogur Fishing"
+                  WindowStartupLocation="CenterScreen">
     <Grid>
-        
-        <!-- Host for navigation; do not rename, code-behind registers this exact name -->
-
-        <ContentControl x:Name="PART_ContentHost" />
+        <ContentPresenter x:Name="AppContent"/>
     </Grid>
-</Window>
+</local:BaseWindow>

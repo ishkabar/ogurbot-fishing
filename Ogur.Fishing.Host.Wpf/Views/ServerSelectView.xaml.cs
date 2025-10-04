@@ -10,38 +10,17 @@ namespace Ogur.Fishing.Host.Wpf.Views;
 
 
 /// <summary>
-/// Server selection view.
+/// View allowing the user to select a Metin2 server.
 /// </summary>
 public partial class ServerSelectView : UserControl
 {
-    private readonly INavigationService _nav;
-    private readonly IServiceProvider _sp;
-
     /// <summary>
-    /// Initializes a new instance of the <see cref="ServerSelectView"/> class.
+    /// Initializes a new instance of the <see cref="ServerSelectView"/> class with its view model.
     /// </summary>
-    /// <param name="vm">View model.</param>
-    /// <param name="nav">Navigation.</param>
-    /// <param name="sp">Service provider.</param>
-    public ServerSelectView(ServerSelectViewModel vm, INavigationService nav, IServiceProvider sp)
+    /// <param name="vm">The server select view model resolved from DI.</param>
+    public ServerSelectView(ServerSelectViewModel vm)
     {
         InitializeComponent();
         DataContext = vm;
-        _nav = nav;
-        _sp = sp;
-
-        vm.ServerChosen += OnServerChosen;
-    }
-
-    /// <summary>
-    /// Handles server selection and navigates forward.
-    /// </summary>
-    /// <param name="sender">Sender.</param>
-    /// <param name="e">Selected server.</param>
-    private void OnServerChosen(object? sender, ServerOption e)
-    {
-        // Example: navigate to the main fishing screen after selection.
-        var main = _sp.GetRequiredService<MainView>();
-        _nav.Navigate(main);
     }
 }

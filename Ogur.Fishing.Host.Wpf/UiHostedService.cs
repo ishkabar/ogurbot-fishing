@@ -3,49 +3,48 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Ogur.Fishing.Host.Wpf.Views;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Ogur.Fishing.Host.Wpf.Services;
 
 
 namespace Ogur.Fishing.Host.Wpf;
 
 /// <summary>
-/// IHostedService that initializes and shows the WPF ShellWindow.
+/// Hosted service that initializes UI flow on application start.
 /// </summary>
 public sealed class UiHostedService : IHostedService
 {
     private readonly ILogger<UiHostedService> _logger;
-    private readonly ShellWindow _shell;
+    private readonly IAppFlowCoordinator _coordinator;
 
     /// <summary>
     /// Initializes a new instance of the <see cref="UiHostedService"/> class.
     /// </summary>
-    /// <param name="logger">Logger.</param>
-    /// <param name="shell">Shell window instance.</param>
-    public UiHostedService(ILogger<UiHostedService> logger, ShellWindow shell)
+    /// <param name="logger">Logger instance.</param>
+    /// <param name="coordinator">App flow coordinator instance.</param>
+    public UiHostedService(ILogger<UiHostedService> logger, IAppFlowCoordinator coordinator)
     {
         _logger = logger;
-        _shell = shell;
+        _coordinator = coordinator;
     }
 
     /// <summary>
-    /// Starts the UI hosted service and shows the shell window.
+    /// Starts the hosted service and initializes the app flow.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Task.</returns>
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Starting UI hosted service.");
-        _shell.Show();
-        return Task.CompletedTask;
+        _logger.LogInformation("UI Hosted Service starting.");
+        await _coordinator.InitializeAsync(cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>
-    /// Stops the UI hosted service.
+    /// Stops the hosted service.
     /// </summary>
-    /// <param name="cancellationToken">Cancellation token.</param>
-    /// <returns>Task.</returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Stopping UI hosted service.");
+        _logger.LogInformation("UI Hosted Service stopping.");
         return Task.CompletedTask;
     }
 }

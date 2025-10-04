@@ -1,60 +1,46 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Ogur.Fishing.Host.Wpf.Views;
+using CommunityToolkit.Mvvm.Messaging;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Ogur.Fishing.Host.Wpf.Navigation;
+using Ogur.Fishing.Host.Wpf.Services;
 using Ogur.Fishing.Host.Wpf.ViewModels;
-using Ogur.Fishing.Host.Wpf.Views;
-using Ogur.Fishing.Host.Wpf.Composition;
-using System.Windows;
-
-
-using HostComposition = Ogur.Fishing.Host.Wpf.Composition.ServiceCollectionExtensions;
-using CapabilitiesComposition = Ogur.Fishing.Host.Wpf.Composition.CapabilitiesServiceCollectionExtensions;
-using NullProxy = Ogur.Fishing.Host.Wpf.Composition.NullProxyServiceCollectionExtensions;
-
 
 
 namespace Ogur.Fishing.Host.Wpf;
+
+
 /// <summary>
-/// WPF application entry helpers.
+/// Configures application services and startup pipeline.
 /// </summary>
 public static class AppStartup
 {
     /// <summary>
-    /// Builds the host with DI registrations.
+    /// Registers services for the WPF host.
     /// </summary>
-    /// <returns>Host.</returns>
-    public static IHost BuildHost()
+    /// <param name="builder">Host application builder.</param>
+    public static void Configure(HostApplicationBuilder builder)
     {
-        return Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder()
-            .ConfigureServices(s =>
-            {
-                s.AddLogging();
+        // Core app services
+        builder.Services.AddSingleton<INavigationService, NavigationService>();
+        builder.Services.AddSingleton<IAppFlowCoordinator, AppFlowCoordinator>();
+        builder.Services.AddSingleton<IMessenger>(WeakReferenceMessenger.Default);
 
-                // Jawne wywołania – zero dwuznaczności:
-                HostComposition.AddWpfHost(s);
-                CapabilitiesComposition.AddFishingCapabilityHost(s);
+        // Domain services (auth stub)
+        builder.Services.AddSingleton<IAuthService, DummyAuthService>();
 
-                // Stuby infra (na razie puste implementacje)
-                NullProxy.AddNullProxy<ogur.abstractions.IInput>(s);
-                NullProxy.AddNullProxy<ogur.abstractions.IScreenCapture>(s);
-                NullProxy.AddNullProxy<ogur.abstractions.IOcr>(s);
+        // ViewModels
+        builder.Services.AddTransient<LoginViewModel>();
+        builder.Services.AddTransient<ServerSelectViewModel>();
+        builder.Services.AddTransient<MainViewModel>();
 
-                // Nawigacja + shell
-                s.AddSingleton<INavigationService, NavigationService>();
-                s.AddSingleton<ShellWindow>();
-            })
-            .Build();
-    }
+        // Views
+        builder.Services.AddSingleton<ShellWindow>();
+        builder.Services.AddTransient<LoginView>();
+        builder.Services.AddTransient<ServerSelectView>();
+        builder.Services.AddTransient<MainView>();
 
-    /// <summary>
-    /// Shows the shell window. Do not call app.Run() here.
-    /// </summary>
-    /// <param name="app">Application.</param>
-    /// <param name="host">Host.</param>
-    public static void Run(Application app, IHost host)
-    {
-        var shell = host.Services.GetRequiredService<ShellWindow>();
-        app.MainWindow = shell;
-        shell.Show();
+        // Hosted UI bootstrap
+        builder.Services.AddHostedService<UiHostedService>();
     }
 }
