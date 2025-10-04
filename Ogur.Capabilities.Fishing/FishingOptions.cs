@@ -1,4 +1,4 @@
-﻿using ogur.abstractions.Primitives;
+﻿using Ogur.Abstractions.Primitives;
 
 namespace Ogur.Capabilities.Fishing;
 

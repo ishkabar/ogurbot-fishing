@@ -1,4 +1,8 @@
-﻿using System;
+﻿// File: Ogur.Capabilities.Fishing/FishingCapability.cs
+// Project: Ogur.Capabilities.Fishing
+// Namespace: Ogur.Capabilities.Fishing
+
+using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -6,8 +10,8 @@ using System.Threading.Channels;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using ogur.abstractions;
-using ogur.abstractions.Primitives;
+using Ogur.Abstractions;
+using Ogur.Abstractions.Primitives;
 using Stateless;
 
 namespace Ogur.Capabilities.Fishing
@@ -104,7 +108,7 @@ namespace Ogur.Capabilities.Fishing
         /// Provides an event stream emitted by the capability.
         /// </summary>
         /// <param name="ct">Cancellation token.</param>
-        /// <returns>Async stream of bot events.</returns>
+        /// <returns>An async stream of bot events.</returns>
         public async IAsyncEnumerable<BotEvent> Events([EnumeratorCancellation] CancellationToken ct)
         {
             while (await _eventChannel.Reader.WaitToReadAsync(ct).ConfigureAwait(false))
@@ -119,16 +123,18 @@ namespace Ogur.Capabilities.Fishing
         /// <summary>
         /// Starts the capability.
         /// </summary>
-        /// <param name="ctx">Start context.</param>
+        /// <param name="ctx">Context with required services.</param>
         /// <param name="ct">Cancellation token.</param>
         public async Task StartAsync(CapabilityStartContext ctx, CancellationToken ct)
         {
             if (Status is CapabilityStatus.Running) return;
             Status = CapabilityStatus.Running;
 
-            await EmitAsync(NewEvent("fishing.start", "Starting fishing"));
+            await EmitAsync(NewEvent("fishing.start", "Starting fishing")).ConfigureAwait(false);
+
             _loopCts = CancellationTokenSource.CreateLinkedTokenSource(ct);
             _ = Task.Run(() => LoopAsync(_loopCts.Token), _loopCts.Token);
+
             await _fsm.FireAsync(Trigger.Start).ConfigureAwait(false);
         }
 
@@ -247,8 +253,7 @@ namespace Ogur.Capabilities.Fishing
         {
             var region = _options.BiteIndicatorRegion;
             var bytes = await _screen.CaptureRegionAsync(region, ct).ConfigureAwait(false);
-            var text = await _ocr.ReadTextAsync(bytes, ct).ConfigureAwait(false);
-
+            var text = await _ocr.RecognizeAsync(bytes, ct).ConfigureAwait(false);
             return text.Contains(_options.BiteKeyword, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -271,6 +276,6 @@ namespace Ogur.Capabilities.Fishing
         /// <param name="payload">Event payload.</param>
         /// <returns>Constructed event.</returns>
         private static BotEvent NewEvent(string name, string payload)
-            => new BotEvent(DateTimeOffset.UtcNow, name, payload);
+            => new BotEvent(name, payload, DateTimeOffset.UtcNow);
     }
 }

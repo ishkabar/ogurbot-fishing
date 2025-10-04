@@ -1,8 +1,8 @@
 ﻿using System.Drawing;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using ogur.abstractions;
-using ogur.abstractions.Primitives;
+using Ogur.Abstractions;
+using Ogur.Abstractions.Primitives;
 
 
 namespace Ogur.Infrastructure.Screen;

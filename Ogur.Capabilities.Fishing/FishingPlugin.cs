@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using ogur.abstractions;
+using Ogur.Abstractions;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Ogur.Capabilities.Fishing;
