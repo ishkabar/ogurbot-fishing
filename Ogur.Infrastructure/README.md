@@ -1,14 +1,22 @@
 # Ogur.Infrastructure
 
-Infrastructure layer for ogur bots.  
-Provides OS-specific implementations for low-level abstractions.
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)
 
-## Responsibilities
-- Input simulation (`IInput` via SendInput).
-- Screen capture (`IScreenCapture` via DXGI/BitBlt).
-- OCR (`IOcr` via Tesseract).
-- Logging support.
+## Overview
+**Ogur.Infrastructure** provides platform-dependent implementations for the Ogur bot ecosystem.  
+It bridges abstractions defined in `Ogur.Abstractions` with actual Windows API integrations.
 
-## Notes
-- Currently stubbed – extend with real implementations.
-- Targets `net8.0-windows`.
+## Components
+- **Input:** `Win32Input` and `NullInput` implementations using SendInput.  
+- **Memory:** `NullProcessMemoryReader` (placeholder) and future `ReadProcessMemory` backend.  
+- **Signals:** `MemoryBiteSignalSource` for fishing event detection.  
+- **Windows:** `WindowActivator` for foreground window management.
+
+## Development
+Infrastructure components are registered via DI and can be replaced or extended independently.  
+Supports modular testing and host-level composition.
+
+## License
+MIT License © Ogur Project

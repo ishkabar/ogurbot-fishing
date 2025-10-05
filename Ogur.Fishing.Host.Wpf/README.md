@@ -1,15 +1,21 @@
 # Ogur.Fishing.Host.Wpf
 
-The **WPF host** for the Fishing capability.  
-Implements MVVM (with `CommunityToolkit.Mvvm`) and dependency injection.
+![Build](https://img.shields.io/badge/build-passing-brightgreen)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![.NET](https://img.shields.io/badge/.NET-8.0-blueviolet)
 
-## Responsibilities
-- Show login screen (stub for now).
-- Show server selection screen.
-- Show main dashboard for Fishing.
-- Integrate with `ogur.Abstractions` event streams and logging.
+## Overview
+**Ogur.Fishing.Host.Wpf** is a WPF MVVM-based host for running and debugging Ogur bot capabilities.  
+It provides an interface for user authentication, server selection, and runtime state visualization.
 
-## Build & Run
-```bash
-dotnet run --project Ogur.Fishing.Host.Wpf
-```
+## Architecture
+- **MVVM:** based on `CommunityToolkit.Mvvm`.  
+- **Views:** `LoginView`, `ServerSelectView`, `MainView`.  
+- **Services:** `FishingActionExecutor`, `SelectedProcessAccessorAdapter`, `NullInput`.  
+- **DI:** Microsoft.Extensions.DependencyInjection, ILogger<T>, IOptions<T>.
+
+## Usage
+Build and run `Ogur.Fishing.Host.Wpf`. Configure appsettings.json to point to capability plugins and signal sources.
+
+## License
+MIT License © Ogur Project
