@@ -1,47 +1,67 @@
-﻿using System;
+﻿// File: Ogur.Fishing.Host.Wpf/Services/FishingActionExecutor.cs
+// Project: Ogur.Fishing.Host.Wpf
+// Namespace: Ogur.Fishing.Host.Wpf.Services
+using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Ogur.Abstractions;
-using Ogur.Abstractions.Windows;
 using Ogur.Abstractions.Input;
+using Ogur.Abstractions.Windows;
 using Ogur.Capabilities.Fishing;
+using Ogur.Capabilities.Fishing.Adapters;
 using Ogur.Fishing.Host.Wpf.Services.Models;
+using Ogur.Fishing.Host.Wpf.Adapters;
 
 namespace Ogur.Fishing.Host.Wpf.Services
 {
     /// <summary>
-    /// Consumes fishing events and dispatches key presses to the selected game window using input abstraction.
+    /// Consumes fishing events and dispatches key presses to the selected game window.
     /// </summary>
     public sealed class FishingActionExecutor : BackgroundService
     {
         private readonly ILogger<FishingActionExecutor> _logger;
         private readonly FishingCapability _fishing;
         private readonly IInput _input;
-        private readonly Ogur.Abstractions.Windows.IWindowActivator _activator;
+        private readonly IWindowActivator _activator;
         private readonly ISessionState _session;
+        private readonly IKeyboardSynthesizer _keys;
+        private readonly FishingClickAdapter _clicks;
+        private readonly IFishingRunGate _runGate;
+
+        private readonly Stopwatch _castWatch = Stopwatch.StartNew();
 
         /// <summary>
         /// Initializes a new instance of the <see cref="FishingActionExecutor"/> class.
         /// </summary>
         /// <param name="logger">Logger.</param>
         /// <param name="fishing">Fishing capability that produces events.</param>
-        /// <param name="input">Input simulation service.</param>
-        /// <param name="activator">Window activator service.</param>
+        /// <param name="input">Input simulation abstraction.</param>
+        /// <param name="activator">Window activator.</param>
         /// <param name="session">Current session state.</param>
+        /// <param name="keys">Keyboard synthesizer.</param>
+        /// <param name="clicks">High-level click adapter.</param>
+        /// <param name="runGate">Run gate (enabled/disabled by UI).</param>
         public FishingActionExecutor(
             ILogger<FishingActionExecutor> logger,
             FishingCapability fishing,
             IInput input,
-            IWindowActivator activator, 
-            ISessionState session)
+            IWindowActivator activator,
+            ISessionState session,
+            IKeyboardSynthesizer keys,
+            FishingClickAdapter clicks,
+            IFishingRunGate runGate)
         {
             _logger = logger;
             _fishing = fishing;
             _input = input;
             _activator = activator;
             _session = session;
+            _keys = keys;
+            _clicks = clicks;
+            _runGate = runGate;
         }
 
         /// <summary>
@@ -53,23 +73,28 @@ namespace Ogur.Fishing.Host.Wpf.Services
         {
             await foreach (var e in _fishing.Events(stoppingToken))
             {
-                if (stoppingToken.IsCancellationRequested)
+                if (stoppingToken.IsCancellationRequested) break;
+
+                // 🔒 TWARDY BEZPIECZNIK: ignoruj wszystko, dopóki gate off lub capability nie Running
+                if (!_runGate.Enabled || _fishing.Status != CapabilityStatus.Running)
                 {
-                    break;
+                    // lekki oddech, jeśli jakiś emit spamuje
+                    await Task.Delay(50, stoppingToken);
+                    continue;
                 }
 
                 switch (e.Type)
                 {
                     case "fishing.cast.request":
-                        await HandleCastAsync(stoppingToken).ConfigureAwait(false);
+                        await HandleCastAsync(stoppingToken);
                         break;
 
                     case "fishing.hook.request":
-                        await HandleHookAsync(stoppingToken).ConfigureAwait(false);
+                        await HandleHookAsync(stoppingToken);
                         break;
 
                     case "fishing.loot.request":
-                        await HandleLootAsync(stoppingToken).ConfigureAwait(false);
+                        await HandleLootAsync(stoppingToken);
                         break;
 
                     default:
@@ -82,8 +107,6 @@ namespace Ogur.Fishing.Host.Wpf.Services
         /// <summary>
         /// Brings the selected game window to foreground using HWND from session.
         /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>True if activation succeeded; otherwise false.</returns>
         private async Task<bool> ActivateWindowAsync(CancellationToken ct)
         {
             var proc = _session.SelectedProcess;
@@ -93,130 +116,74 @@ namespace Ogur.Fishing.Host.Wpf.Services
                 return false;
             }
 
-            // Expecting Hwnd (nint) on the SelectedProcess model.
-            var hwndProp = proc.GetType().GetProperty("Hwnd");
-            if (hwndProp is null)
-            {
-                _logger.LogWarning("Selected process model has no 'Hwnd' property.");
-                return false;
-            }
-
-            var hwndObj = hwndProp.GetValue(proc);
-            if (hwndObj is null || hwndObj is not nint hwnd || hwnd == 0)
-            {
-                _logger.LogWarning("Selected process has invalid HWND.");
-                return false;
-            }
-
-            var ok = await _activator.ActivateAsync(hwnd, ct).ConfigureAwait(false);
-            if (!ok)
-            {
-                _logger.LogWarning("Failed to activate window: {Hwnd}", hwnd);
-            }
+            nint hwnd = 0;
+            if (proc is ProcessOption po) hwnd = po.Hwnd;
             else
             {
-                _logger.LogDebug("Game window activated: {Hwnd}", hwnd);
+                var hwndProp = proc.GetType().GetProperty("Hwnd");
+                if (hwndProp is not null && hwndProp.GetValue(proc) is nint v) hwnd = v;
             }
 
+            if (hwnd == 0)
+            {
+                _logger.LogWarning("Selected process has invalid HWND (0).");
+                return false;
+            }
+
+            var ok = await _activator.ActivateAsync(hwnd, ct);
+            _logger.LogInformation("ActivateAsync(Hwnd={Hwnd}) -> {Ok}", hwnd, ok);
             return ok;
         }
 
         /// <summary>
-        /// Handles the cast action: optional bait selection, then cast key.
+        /// Handles the cast action with throttle and EButton presses.
         /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
         private async Task HandleCastAsync(CancellationToken ct)
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
-            {
-                return;
-            }
+            // anty-spam
+            if (_castWatch.ElapsedMilliseconds < 150) return;
+            _castWatch.Restart();
+
+            if (!_runGate.Enabled || _fishing.Status != CapabilityStatus.Running) return;
+
+            if (!await ActivateWindowAsync(ct)) return;
 
             var bait = _session.SelectedBait;
             if (bait is not null)
             {
-                await SendWpfKeyAsync(bait.Key, ct).ConfigureAwait(false);
-                await Task.Delay(TimeSpan.FromMilliseconds(150), ct).ConfigureAwait(false);
+                var inputKey = WpfKeyMapper.ToInputKey(bait.Key);
+                await _clicks.PressAsync(inputKey, ct);
+                await Task.Delay(60, ct);
             }
 
-            await SendKeyAsync(InputKey.Space, ct).ConfigureAwait(false);
+            await _keys.PressKey2Async(ScanCode.Space, ct);
             _logger.LogInformation("CAST (bait={Bait})", bait?.DisplayName ?? "none");
         }
 
         /// <summary>
         /// Handles the hook action.
         /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
         private async Task HandleHookAsync(CancellationToken ct)
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
-            {
-                return;
-            }
+            if (!_runGate.Enabled || _fishing.Status != CapabilityStatus.Running) return;
 
-            await SendKeyAsync(InputKey.Space, ct).ConfigureAwait(false);
+            if (!await ActivateWindowAsync(ct)) return;
+
+            await _keys.PressKey2Async(ScanCode.Space, ct);
             _logger.LogInformation("HOOK");
         }
 
         /// <summary>
-        /// Handles the loot action.
+        /// Handles the loot action (stub for MVP).
         /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
         private async Task HandleLootAsync(CancellationToken ct)
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
-            {
-                return;
-            }
+            if (!_runGate.Enabled || _fishing.Status != CapabilityStatus.Running) return;
+
+            if (!await ActivateWindowAsync(ct)) return;
 
             _logger.LogInformation("LOOT (stub)");
             await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Sends a WPF key using the input abstraction after mapping it to <see cref="InputKey"/>.
-        /// </summary>
-        /// <param name="wpfKey">WPF key value.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private Task SendWpfKeyAsync(System.Windows.Input.Key wpfKey, CancellationToken ct)
-        {
-            var mapped = InputKeyMapper.ToInputKey(wpfKey);
-            return SendKeyAsync(mapped, ct);
-        }
-
-        /// <summary>
-        /// Sends a key using the input abstraction. Falls back to text for simple keys.
-        /// </summary>
-        /// <param name="key">Key to send.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private async Task SendKeyAsync(InputKey key, CancellationToken ct)
-        {
-            switch (key)
-            {
-                case InputKey.D1:
-                    await _input.SendTextAsync("1", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D2:
-                    await _input.SendTextAsync("2", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D3:
-                    await _input.SendTextAsync("3", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D4:
-                    await _input.SendTextAsync("4", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.Space:
-                    await _input.SendTextAsync(" ", ct).ConfigureAwait(false);
-                    return;
-                default:
-                    _logger.LogWarning("InputKey {Key} not supported by current IInput. Extend IInput or SendKeyAsync mapping.", key);
-                    return;
-            }
         }
     }
 }

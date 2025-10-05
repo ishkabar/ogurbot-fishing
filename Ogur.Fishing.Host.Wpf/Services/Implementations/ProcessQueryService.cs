@@ -45,10 +45,15 @@ public sealed class ProcessQueryService : IProcessQueryService
         "patcher",
         "mt2009 patcher",
         "client",
-        "ymir"
+        "ymir",
+        "sublime","note"
     };
 
-    /// <inheritdoc />
+    /// <summary>
+    /// Returns candidate processes that match allowed names and have a top-level window.
+    /// </summary>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>Ordered list of <see cref="ProcessOption"/>.</returns>
     public Task<IReadOnlyList<ProcessOption>> GetCandidatesAsync(CancellationToken ct)
     {
         var list = new List<ProcessOption>();
@@ -61,16 +66,17 @@ public sealed class ProcessQueryService : IProcessQueryService
             if (!Names.Any(n => name.Contains(n))) continue;
 
             DateTime? started = null;
-            string? path = null;
+            string? exePath = null;
+            nint hwnd = 0;
+            int? width = null, height = null, x = null, y = null;
 
             try { started = p.StartTime; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read StartTime for PID {Pid}", p.Id); }
-            try { path = p.MainModule?.FileName; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read MainModule for PID {Pid}", p.Id); }
+            try { exePath = p.MainModule?.FileName; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read MainModule for PID {Pid}", p.Id); }
 
-            int? width = null, height = null, x = null, y = null;
             try
             {
-                var hWnd = p.MainWindowHandle;
-                if (hWnd != IntPtr.Zero && GetWindowRect(hWnd, out var rect))
+                hwnd = p.MainWindowHandle;
+                if (hwnd != 0 && GetWindowRect((IntPtr)hwnd, out var rect))
                 {
                     width = rect.Right - rect.Left;
                     height = rect.Bottom - rect.Top;
@@ -91,14 +97,15 @@ public sealed class ProcessQueryService : IProcessQueryService
             list.Add(new ProcessOption
             {
                 Pid = p.Id,
-                Display = fullLabel,
                 DisplayShort = shortLabel,
+                Display = fullLabel,
                 StartedAt = started,
-                Path = path,
+                ExePath = exePath,
                 ResolutionWidth = width,
                 ResolutionHeight = height,
                 WindowX = x,
-                WindowY = y
+                WindowY = y,
+                Hwnd = hwnd
             });
         }
 

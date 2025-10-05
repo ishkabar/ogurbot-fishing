@@ -6,6 +6,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Ogur.Abstractions;
 using Ogur.Abstractions.Memory;
+using Ogur.Infrastructure.Configuration;
 
 namespace Ogur.Infrastructure.Signals
 {
@@ -49,14 +50,14 @@ namespace Ogur.Infrastructure.Signals
             if (!_processAccessor.TryGetSelectedProcess(out var proc) || proc is null)
             {
                 _logger.LogDebug("No selected process; cannot probe memory.");
-                await Task.Delay(timeout, ct);
+                await Task.Delay(timeout, ct).ConfigureAwait(false);
                 return false;
             }
 
             if (proc.ProcessId <= 0)
             {
                 _logger.LogWarning("Invalid process id for memory probing.");
-                await Task.Delay(timeout, ct);
+                await Task.Delay(timeout, ct).ConfigureAwait(false);
                 return false;
             }
 

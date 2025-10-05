@@ -27,11 +27,6 @@ public sealed class ProcessOption
     public DateTime? StartedAt { get; init; }
 
     /// <summary>
-    /// Gets or sets the raw executable path if available.
-    /// </summary>
-    public string? Path { get; init; }
-
-    /// <summary>
     /// Gets or sets the window width in pixels if available.
     /// </summary>
     public int? ResolutionWidth { get; init; }
@@ -50,4 +45,20 @@ public sealed class ProcessOption
     /// Gets or sets the window position Y (screen coordinate) if available.
     /// </summary>
     public int? WindowY { get; init; }
+    
+    /// <summary>
+    /// Gets or sets the main window handle (HWND). Required for activation.
+    /// </summary>
+    public nint Hwnd { get; init; }
+
+    /// <summary>
+    /// Gets or sets the executable path if available.
+    /// </summary>
+    public string? ExePath { get; init; }
+
+    /// <summary>
+    /// Returns the compact display label for list controls.
+    /// </summary>
+    /// <returns>Compact label.</returns>
+    public override string ToString() => DisplayShort;
 }

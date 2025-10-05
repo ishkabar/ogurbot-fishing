@@ -1,4 +1,4 @@
-﻿namespace Ogur.Infrastructure.Signals
+﻿namespace Ogur.Infrastructure.Configuration
 {
     /// <summary>
     /// Options for memory-based bite signal detection.
