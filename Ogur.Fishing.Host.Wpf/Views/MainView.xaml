@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:beh="clr-namespace:Ogur.Fishing.Host.Wpf.Behaviors"
              xmlns:vm="clr-namespace:Ogur.Fishing.Host.Wpf.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:MainViewModel}">
@@ -204,7 +205,8 @@
 
                 <Border Grid.Row="1" Background="#0E1420" CornerRadius="8" Padding="6" Height="260">
                     <ListBox ItemsSource="{Binding Events}"
-                             Style="{StaticResource ListBox.Dark}">
+                             Style="{StaticResource ListBox.Dark}"
+                             beh:AutoScroll.IsEnabled="True">
                         <ListBox.ItemTemplate>
                             <DataTemplate>
                                 <TextBlock Text="{Binding}" Margin="4,2"/>

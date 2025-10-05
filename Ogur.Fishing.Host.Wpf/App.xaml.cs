@@ -1,65 +1,66 @@
-﻿using System.Windows;
+﻿using System;
+using System.Threading.Tasks;
+using System.Windows;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Ogur.Fishing.Host.Wpf.Views;
 
-
-
-namespace Ogur.Fishing.Host.Wpf;
-
-/// <summary>
-/// WPF application entry point that wires up the Host and shows the shell.
-/// </summary>
-public partial class App : Application
+namespace Ogur.Fishing.Host.Wpf
 {
-    private IHost? _host;
-
     /// <summary>
-    /// Builds the generic host with DI, logging and application services.
+    /// WPF application entry point that wires up the Host and shows the shell.
     /// </summary>
-    /// <returns>Configured host instance.</returns>
-    private static IHost BuildHost()
+    public partial class App : Application
     {
-        var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
-        AppStartup.Configure(builder);
-        return builder.Build();
-    }
+        private IHost? _host;
 
-    /// <summary>
-    /// Handles application startup, creates the host, shows ShellWindow first, then starts background services.
-    /// </summary>
-    /// <param name="e">Startup event args.</param>
-    protected override async void OnStartup(StartupEventArgs e)
-    {
-        base.OnStartup(e);
-
-        _host = BuildHost();
-        
-        var shell = _host.Services.GetRequiredService<ShellWindow>();
-        MainWindow = shell;
-        shell.Show();
-        
-        await _host.StartAsync().ConfigureAwait(false);
-    }
-
-    /// <summary>
-    /// Handles application exit by stopping and disposing the host.
-    /// </summary>
-    /// <param name="e">Exit event args.</param>
-    protected override async void OnExit(ExitEventArgs e)
-    {
-        if (_host is not null)
+        /// <summary>
+        /// Builds the generic host with DI, logging and application services.
+        /// </summary>
+        /// <returns>Configured host instance.</returns>
+        private static IHost BuildHost()
         {
-            try
-            {
-                await _host.StopAsync(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
-            }
-            finally
-            {
-                _host.Dispose();
-            }
+            var builder = Microsoft.Extensions.Hosting.Host.CreateApplicationBuilder();
+            AppStartup.Configure(builder);
+            return builder.Build();
         }
 
-        base.OnExit(e);
+        /// <summary>
+        /// Handles application startup, creates the host, shows ShellWindow first, then starts background services.
+        /// </summary>
+        /// <param name="e">Startup event args.</param>
+        protected override async void OnStartup(StartupEventArgs e)
+        {
+            base.OnStartup(e);
+
+            _host = BuildHost();
+
+            var shell = _host.Services.GetRequiredService<ShellWindow>();
+            MainWindow = shell;
+            shell.Show();
+
+            await _host.StartAsync();
+        }
+
+        /// <summary>
+        /// Handles application exit by stopping and disposing the host.
+        /// </summary>
+        /// <param name="e">Exit event args.</param>
+        protected override async void OnExit(ExitEventArgs e)
+        {
+            if (_host is not null)
+            {
+                try
+                {
+                    await _host.StopAsync(TimeSpan.FromSeconds(5));
+                }
+                finally
+                {
+                    _host.Dispose();
+                }
+            }
+
+            base.OnExit(e);
+        }
     }
 }

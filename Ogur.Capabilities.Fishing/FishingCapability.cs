@@ -18,17 +18,18 @@ namespace Ogur.Capabilities.Fishing
 {
     /// <summary>
     /// Fishing capability implementing finite state machine for the fishing flow.
-    /// Emits high-level request events for input actions instead of calling input directly.
+    /// Sequence: bait -> space -> wait for bite signal -> hook -> loot.
     /// </summary>
-    public sealed class FishingCapability : IBotCapability
+    public sealed partial class FishingCapability : IBotCapability
     {
         private readonly ILogger<FishingCapability> _logger;
         private readonly IInput _input;
-        private readonly IScreenCapture _screen;
-        private readonly IOcr _ocr;
+        private readonly IFishingSignalSource _signal;
         private readonly FishingOptions _options;
 
         private readonly Channel<BotEvent> _eventChannel = Channel.CreateUnbounded<BotEvent>();
+
+        private State _state = State.Idle;
         private readonly StateMachine<State, Trigger> _fsm;
         private CancellationTokenSource? _loopCts;
 
@@ -47,23 +48,20 @@ namespace Ogur.Capabilities.Fishing
         /// </summary>
         /// <param name="logger">Logger instance.</param>
         /// <param name="input">Input abstraction.</param>
-        /// <param name="screen">Screen capture provider.</param>
-        /// <param name="ocr">OCR provider.</param>
+        /// <param name="signal">Bite signal source.</param>
         /// <param name="options">Capability options.</param>
         public FishingCapability(
             ILogger<FishingCapability> logger,
             IInput input,
-            IScreenCapture screen,
-            IOcr ocr,
+            IFishingSignalSource signal,
             IOptions<FishingOptions> options)
         {
             _logger = logger;
             _input = input;
-            _screen = screen;
-            _ocr = ocr;
+            _signal = signal;
             _options = options.Value;
 
-            _fsm = new StateMachine<State, Trigger>(State.Idle);
+            _fsm = new StateMachine<State, Trigger>(() => _state, s => _state = s);
 
             _fsm.Configure(State.Idle)
                 .Permit(Trigger.Start, State.Casting);
@@ -77,7 +75,8 @@ namespace Ogur.Capabilities.Fishing
                 .OnEntryAsync(OnWaitingEnterAsync)
                 .Permit(Trigger.BiteDetected, State.Hooking)
                 .Permit(Trigger.Timeout, State.Casting)
-                .Permit(Trigger.Fault, State.Error);
+                .Permit(Trigger.Fault, State.Error)
+                .Ignore(Trigger.Tick);
 
             _fsm.Configure(State.Hooking)
                 .OnEntryAsync(OnHookingEnterAsync)
@@ -91,6 +90,7 @@ namespace Ogur.Capabilities.Fishing
 
             _fsm.Configure(State.Error)
                 .OnEntryAsync(async _ => await EmitAsync(NewEvent("fishing.error", "Unhandled error")))
+                .Permit(Trigger.Start, State.Casting)
                 .Ignore(Trigger.Tick);
         }
 
@@ -127,7 +127,16 @@ namespace Ogur.Capabilities.Fishing
         /// <param name="ct">Cancellation token.</param>
         public async Task StartAsync(CapabilityStartContext ctx, CancellationToken ct)
         {
-            if (Status is CapabilityStatus.Running) return;
+            if (Status is CapabilityStatus.Running)
+            {
+                return;
+            }
+
+            if (Status is CapabilityStatus.Stopped)
+            {
+                _state = State.Idle;
+            }
+
             Status = CapabilityStatus.Running;
 
             await EmitAsync(NewEvent("fishing.start", "Starting fishing")).ConfigureAwait(false);
@@ -149,7 +158,7 @@ namespace Ogur.Capabilities.Fishing
         }
 
         /// <summary>
-        /// Stops the capability.
+        /// Stops the capability and resets the FSM to Idle for the next start.
         /// </summary>
         /// <param name="ct">Cancellation token.</param>
         public async Task StopAsync(CancellationToken ct)
@@ -162,6 +171,8 @@ namespace Ogur.Capabilities.Fishing
             }
 
             Status = CapabilityStatus.Stopped;
+            _state = State.Idle;
+
             await EmitAsync(NewEvent("fishing.stop", "Stopped fishing")).ConfigureAwait(false);
         }
 
@@ -198,26 +209,34 @@ namespace Ogur.Capabilities.Fishing
         }
 
         /// <summary>
-        /// FSM: enter WaitingBite.
+        /// FSM: enter WaitingBite. Waits for external bite signal or times out.
         /// </summary>
         private async Task OnWaitingEnterAsync()
         {
             await EmitAsync(NewEvent("fishing.state", "Waiting for bite")).ConfigureAwait(false);
 
             var timeout = TimeSpan.FromSeconds(_options.BiteTimeoutSeconds);
-            var start = DateTimeOffset.UtcNow;
+            bool bite = false;
 
-            while (DateTimeOffset.UtcNow - start < timeout)
+            try
             {
-                var bite = await DetectBiteAsync(CancellationToken.None).ConfigureAwait(false);
-                if (bite)
-                {
-                    await EmitAsync(NewEvent("fishing.bite", "Bite detected")).ConfigureAwait(false);
-                    await _fsm.FireAsync(Trigger.BiteDetected).ConfigureAwait(false);
-                    return;
-                }
+                bite = await _signal.WaitForBiteAsync(timeout, CancellationToken.None).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                bite = false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "WaitForBiteAsync failed; will continue flow via timeout.");
+                bite = false;
+            }
 
-                await Task.Delay(_options.PollIntervalMs).ConfigureAwait(false);
+            if (bite)
+            {
+                await EmitAsync(NewEvent("fishing.bite", "Bite detected")).ConfigureAwait(false);
+                await _fsm.FireAsync(Trigger.BiteDetected).ConfigureAwait(false);
+                return;
             }
 
             await EmitAsync(NewEvent("fishing.timeout", "Bite wait timeout")).ConfigureAwait(false);
@@ -242,19 +261,6 @@ namespace Ogur.Capabilities.Fishing
             await EmitAsync(NewEvent("fishing.state", "Looting")).ConfigureAwait(false);
             await EmitAsync(NewEvent("fishing.loot.request", "Request: loot items")).ConfigureAwait(false);
             await _fsm.FireAsync(Trigger.LootDone).ConfigureAwait(false);
-        }
-
-        /// <summary>
-        /// Detects a bite by OCR over a configured capture region.
-        /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>True if bite text is detected.</returns>
-        private async Task<bool> DetectBiteAsync(CancellationToken ct)
-        {
-            var region = _options.BiteIndicatorRegion;
-            var bytes = await _screen.CaptureRegionAsync(region, ct).ConfigureAwait(false);
-            var text = await _ocr.RecognizeAsync(bytes, ct).ConfigureAwait(false);
-            return text.Contains(_options.BiteKeyword, StringComparison.OrdinalIgnoreCase);
         }
 
         /// <summary>

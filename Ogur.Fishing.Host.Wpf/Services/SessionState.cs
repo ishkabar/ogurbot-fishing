@@ -1,4 +1,6 @@
 ﻿using Ogur.Fishing.Host.Wpf.ViewModels;
+using Ogur.Fishing.Host.Wpf.Services.Models;
+
 
 
 namespace Ogur.Fishing.Host.Wpf.Services;
@@ -18,4 +20,14 @@ public sealed class SessionState : ISessionState
     /// Gets or sets the currently authenticated username for this session.
     /// </summary>
     public string? Username { get; set; }
+    
+    /// <summary>
+    /// Gets or sets the currently selected bait option.
+    /// </summary>
+    public BaitOption? SelectedBait { get; set; }
+
+    /// <summary>
+    /// Gets or sets the currently selected game process.
+    /// </summary>
+    public ProcessOption? SelectedProcess { get; set; }
 }

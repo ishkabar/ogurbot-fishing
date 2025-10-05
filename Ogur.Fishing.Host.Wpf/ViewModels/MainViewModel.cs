@@ -1,8 +1,4 @@
-﻿// File: Ogur.Fishing.Host.Wpf/ViewModels/MainViewModel.cs
-// Project: Ogur.Fishing.Host.Wpf
-// Namespace: Ogur.Fishing.Host.Wpf.ViewModels
-
-using System;
+﻿using System;
 using System.Collections.ObjectModel;
 using System.Threading;
 using System.Threading.Tasks;
@@ -13,6 +9,7 @@ using Microsoft.Extensions.Logging;
 using Ogur.Capabilities.Fishing;
 using Ogur.Fishing.Host.Wpf.Services;
 using Ogur.Abstractions;
+using Ogur.Fishing.Host.Wpf.Services.Models;
 using BaitOption = Ogur.Fishing.Host.Wpf.Services.Models.BaitOption;
 using ProcessOption = Ogur.Fishing.Host.Wpf.Services.Models.ProcessOption;
 
@@ -29,6 +26,8 @@ namespace Ogur.Fishing.Host.Wpf.ViewModels
         private readonly IBaitCatalog _baits;
         private readonly IProcessQueryService _processes;
         private readonly CancellationTokenSource _cts = new();
+        private readonly ISessionState _session;
+
 
         /// <summary>
         /// Initializes a new instance of the <see cref="MainViewModel"/> class.
@@ -43,13 +42,16 @@ namespace Ogur.Fishing.Host.Wpf.ViewModels
             IServiceProvider sp,
             ILogger<MainViewModel> logger,
             IBaitCatalog baits,
-            IProcessQueryService processes)
+            IProcessQueryService processes,
+            ISessionState session)
         {
             _fishing = fishing;
             _sp = sp;
             _logger = logger;
             _baits = baits;
             _processes = processes;
+            _session = session;
+
 
             BaitItems = new ObservableCollection<BaitOption>(_baits.GetAll());
             Events = new ObservableCollection<string>();
@@ -169,5 +171,19 @@ namespace Ogur.Fishing.Host.Wpf.ViewModels
                 Status = _fishing.Status.ToString();
             }
         }
+        
+        /// <summary>
+        /// Called when SelectedBait changes; updates shared session state.
+        /// </summary>
+        /// <param name="value">New bait option.</param>
+        partial void OnSelectedBaitChanged(BaitOption? value)
+            => _session.SelectedBait = value;
+        
+        /// <summary>
+        /// Called when SelectedProcess changes; updates shared session state.
+        /// </summary>
+        /// <param name="value">New process option.</param>
+        partial void OnSelectedProcessChanged(ProcessOption? value)
+            => _session.SelectedProcess = value;
     }
 }

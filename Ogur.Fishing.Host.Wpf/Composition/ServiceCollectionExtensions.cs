@@ -10,6 +10,13 @@ using Ogur.Fishing.Host.Wpf.Views;
 using Ogur.Capabilities.Fishing;
 using Ogur.Abstractions;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Ogur.Abstractions;
+using Ogur.Capabilities.Fishing;
+using Ogur.Fishing.Host.Wpf.Services;
+using Ogur.Infrastructure.Signals;
 
 
 
@@ -28,10 +35,13 @@ public static class ServiceCollectionExtensions
     /// <returns>The same collection.</returns>
     public static IServiceCollection AddWpfHost(this IServiceCollection services)
     {
+
         services.AddSingleton<IBaitCatalog, BaitCatalog>();
         services.AddSingleton<IProcessQueryService, ProcessQueryService>();
         //services.AddSingleton<IHotkeyListener, HotkeyListener>();
         services.AddSingleton<ISessionState, SessionState>();
+        services.AddHostedService<FishingActionExecutor>();
+
 
 
         services.AddSingleton<LoginViewModel>();
@@ -53,18 +63,22 @@ public static class ServiceCollectionExtensions
     /// </summary>
     /// <param name="services">Service collection.</param>
     /// <returns>The same collection.</returns>
-    public static IServiceCollection AddFishingCapabilityHost(this IServiceCollection services)
+    public static IServiceCollection AddFishingCapabilityHost(this IServiceCollection services, IConfiguration cfg)
     {
-        // Stubs for infra (no-op) – do czasu aż podłączysz realne implementacje.
-        AddNullProxy<IInput>(services);
-        AddNullProxy<IScreenCapture>(services);
-        AddNullProxy<IOcr>(services);
+        services.Configure<FishingOptions>(cfg.GetSection("Fishing"));
+        services.Configure<FishingMemorySignalOptions>(cfg.GetSection("Fishing:Legacy"));
+        services.AddSingleton<ISelectedProcessAccessor, SelectedProcessAccessorAdapter>();
+        services.AddSingleton<IFishingSignalSource, MemoryBiteSignalSource>();
+        
+        services.Configure<FishingOptions>(cfg.GetSection("Fishing"));
+        services.Configure<FishingMemorySignalOptions>(cfg.GetSection("Fishing:Legacy"));
 
-        // Default options for FishingOptions (bind z appsettings dodasz później w Startup, jeśli chcesz).
-        services.AddSingleton<IOptions<FishingOptions>>(_ => Options.Create(new FishingOptions()));
+        services.AddSingleton<IFishingSignalSource, MemoryBiteSignalSource>();
 
-        // Capability itself.
         services.AddSingleton<FishingCapability>();
+        services.AddSingleton<IBotCapability>(sp => sp.GetRequiredService<FishingCapability>());
+
+        services.AddHostedService<FishingActionExecutor>();
 
         return services;
     }
