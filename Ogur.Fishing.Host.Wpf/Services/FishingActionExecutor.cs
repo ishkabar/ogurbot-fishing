@@ -1,222 +1,200 @@
-﻿using System;
+﻿// File: Ogur.Fishing.Host.Wpf/Services/FishingActionExecutor.cs
+// Project: Ogur.Fishing.Host.Wpf
+// Namespace: Ogur.Fishing.Host.Wpf.Services
+
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Ogur.Abstractions;
-using Ogur.Abstractions.Windows;
 using Ogur.Abstractions.Input;
+using Ogur.Abstractions.Windows;
 using Ogur.Capabilities.Fishing;
-using Ogur.Fishing.Host.Wpf.Services.Models;
 
-namespace Ogur.Fishing.Host.Wpf.Services
+namespace Ogur.Fishing.Host.Wpf.Services;
+
+/// <summary>
+/// Consumes fishing events and executes physical actions (window activation, key presses).
+/// </summary>
+public sealed class FishingActionExecutor : BackgroundService
 {
+    private readonly ILogger<FishingActionExecutor> _logger;
+    private readonly FishingCapability _fishing;
+    private readonly IInput _input;
+    private readonly IWindowActivator _activator;
+    private readonly ISessionState _session;
+
     /// <summary>
-    /// Consumes fishing events and dispatches key presses to the selected game window using input abstraction.
+    /// Initializes a new instance of the <see cref="FishingActionExecutor"/> class.
     /// </summary>
-    public sealed class FishingActionExecutor : BackgroundService
+    public FishingActionExecutor(
+        ILogger<FishingActionExecutor> logger,
+        FishingCapability fishing,
+        IInput input,
+        IWindowActivator activator,
+        ISessionState session)
     {
-        private readonly ILogger<FishingActionExecutor> _logger;
-        private readonly FishingCapability _fishing;
-        private readonly IInput _input;
-        private readonly Ogur.Abstractions.Windows.IWindowActivator _activator;
-        private readonly ISessionState _session;
+        _logger = logger;
+        _fishing = fishing;
+        _input = input;
+        _activator = activator;
+        _session = session;
+    }
 
-        /// <summary>
-        /// Initializes a new instance of the <see cref="FishingActionExecutor"/> class.
-        /// </summary>
-        /// <param name="logger">Logger.</param>
-        /// <param name="fishing">Fishing capability that produces events.</param>
-        /// <param name="input">Input simulation service.</param>
-        /// <param name="activator">Window activator service.</param>
-        /// <param name="session">Current session state.</param>
-        public FishingActionExecutor(
-            ILogger<FishingActionExecutor> logger,
-            FishingCapability fishing,
-            IInput input,
-            IWindowActivator activator, 
-            ISessionState session)
-        {
-            _logger = logger;
-            _fishing = fishing;
-            _input = input;
-            _activator = activator;
-            _session = session;
-        }
-
-        /// <summary>
-        /// Executes the background loop that handles fishing events.
-        /// </summary>
-        /// <param name="stoppingToken">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    /// <summary>
+    /// Executes the background service, consuming fishing events.
+    /// </summary>
+    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
+    {
+        _logger.LogInformation("🔥 FishingActionExecutor STARTED - waiting for events...");
+        
+        try
         {
             await foreach (var e in _fishing.Events(stoppingToken))
             {
                 if (stoppingToken.IsCancellationRequested)
                 {
+                    _logger.LogInformation("🔥 FishingActionExecutor stopping (cancellation requested)");
                     break;
                 }
 
-                switch (e.Type)
+                _logger.LogInformation("🔥 FishingActionExecutor received event: {Type} - {Message}", e.Type, e.Message);
+
+                _logger.LogWarning("🔥 DEBUG: About to switch on event type: '{Type}'", e.Type);
+                
+                try
                 {
-                    case "fishing.cast.request":
-                        await HandleCastAsync(stoppingToken).ConfigureAwait(false);
-                        break;
+                    switch (e.Type)
+                    {
+                        case "fishing.cast.request":
+                            _logger.LogInformation("🔥 Handling CAST request");
+                            await HandleCastAsync(stoppingToken);
+                            break;
 
-                    case "fishing.hook.request":
-                        await HandleHookAsync(stoppingToken).ConfigureAwait(false);
-                        break;
-
-                    case "fishing.loot.request":
-                        await HandleLootAsync(stoppingToken).ConfigureAwait(false);
-                        break;
-
-                    default:
-                        _logger.LogDebug("Unhandled event type: {Type}", e.Type);
-                        break;
+                        case "fishing.hook.request":
+                            _logger.LogInformation("🔥 Handling HOOK request");
+                            await HandleHookAsync(e, stoppingToken);
+                            break;
+                            
+                        default:
+                            _logger.LogInformation("🔥 Ignoring event type: {Type}", e.Type);
+                            break;
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "🔥 Failed to handle event {Type}", e.Type);
                 }
             }
         }
-
-        /// <summary>
-        /// Brings the selected game window to foreground using HWND from session.
-        /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>True if activation succeeded; otherwise false.</returns>
-        private async Task<bool> ActivateWindowAsync(CancellationToken ct)
+        catch (OperationCanceledException)
         {
-            var proc = _session.SelectedProcess;
-            if (proc is null)
-            {
-                _logger.LogWarning("No target process is selected.");
-                return false;
-            }
+            _logger.LogInformation("🔥 FishingActionExecutor CANCELLED");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "🔥 FishingActionExecutor CRASHED");
+        }
+        finally
+        {
+            _logger.LogInformation("🔥 FishingActionExecutor STOPPED");
+        }
+    }
 
-            // Expecting Hwnd (nint) on the SelectedProcess model.
-            var hwndProp = proc.GetType().GetProperty("Hwnd");
-            if (hwndProp is null)
-            {
-                _logger.LogWarning("Selected process model has no 'Hwnd' property.");
-                return false;
-            }
+    private async Task<bool> ActivateWindowAsync(CancellationToken ct)
+    {
+        var hwnd = _session.SelectedProcess?.Hwnd ?? 0;
+        
+        _logger.LogInformation("🔥 ActivateWindowAsync: HWND=0x{Hwnd:X}", hwnd);
+        
+        if (hwnd == 0)
+        {
+            _logger.LogWarning("🔥 No window selected (HWND=0), cannot activate");
+            return false;
+        }
+        
+        bool result = await _activator.ActivateAsync(hwnd, ct);
+        _logger.LogInformation("🔥 Window activation result: {Result}", result);
+        
+        return result;
+    }
 
-            var hwndObj = hwndProp.GetValue(proc);
-            if (hwndObj is null || hwndObj is not nint hwnd || hwnd == 0)
-            {
-                _logger.LogWarning("Selected process has invalid HWND.");
-                return false;
-            }
+    private async Task HandleCastAsync(CancellationToken ct)
+    {
+        _logger.LogInformation("🔥 HandleCastAsync START");
+        await Task.Delay(150, ct);
+        
+        _logger.LogInformation("🔥 Activating window...");
+        if (!await ActivateWindowAsync(ct))
+        {
+            _logger.LogWarning("🔥 HandleCastAsync ABORTED - window activation failed");
+            return;
+        }
+        _logger.LogInformation("🔥 Window activated");
+        
+        _logger.LogInformation("🔥 Waiting 100ms after window activation");
+        await Task.Delay(150, ct);
 
-            var ok = await _activator.ActivateAsync(hwnd, ct).ConfigureAwait(false);
-            if (!ok)
-            {
-                _logger.LogWarning("Failed to activate window: {Hwnd}", hwnd);
-            }
-            else
-            {
-                _logger.LogDebug("Game window activated: {Hwnd}", hwnd);
-            }
-
-            return ok;
+        var bait = _session.SelectedBait;
+        _logger.LogInformation("🔥 SelectedBait: {Bait}", bait?.DisplayName ?? "NULL");
+    
+        if (bait is not null)
+        {
+            var baitKey = InputKeyMapper.ToInputKey(bait.Key);
+            _logger.LogInformation("🔥 Sending bait key: {Key}", baitKey);
+        
+            await _input.SendKeyAsync(baitKey, ct);
+        
+            _logger.LogInformation("🔥 Waiting 200ms after bait");
+            await Task.Delay(200, ct);
         }
 
-        /// <summary>
-        /// Handles the cast action: optional bait selection, then cast key.
-        /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private async Task HandleCastAsync(CancellationToken ct)
+        _logger.LogInformation("🔥 Sending cast key: Space");
+        await _input.SendKeyAsync(InputKey.Space, ct);
+    
+        _logger.LogInformation("🔥 HandleCastAsync DONE");
+    }
+
+    
+    
+    private async Task HandleHookAsync(ApplicationEvent e, CancellationToken ct)  // ✅ ZMIEŃ NA ApplicationEvent
+    {
+        _logger.LogInformation("🔥 HandleHookAsync START");
+    
+        int spaceCount = 1;
+    
+        // ✅ FIX: Najprostsza wersja TryParse
+        if (!string.IsNullOrEmpty(e.Message) && int.TryParse(e.Message, out int parsed) && parsed >= 1 && parsed <= 3)
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            var bait = _session.SelectedBait;
-            if (bait is not null)
-            {
-                await SendWpfKeyAsync(bait.Key, ct).ConfigureAwait(false);
-                await Task.Delay(TimeSpan.FromMilliseconds(150), ct).ConfigureAwait(false);
-            }
-
-            await SendKeyAsync(InputKey.Space, ct).ConfigureAwait(false);
-            _logger.LogInformation("CAST (bait={Bait})", bait?.DisplayName ?? "none");
+            spaceCount = parsed;
         }
-
-        /// <summary>
-        /// Handles the hook action.
-        /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private async Task HandleHookAsync(CancellationToken ct)
+        else
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
-            {
-                return;
-            }
-
-            await SendKeyAsync(InputKey.Space, ct).ConfigureAwait(false);
-            _logger.LogInformation("HOOK");
+            _logger.LogWarning("🔥 Failed to parse space count from message: '{Message}', using default: 1", e.Message);
         }
+    
+        _logger.LogInformation("🔥 Space count: {Count}", spaceCount);
 
-        /// <summary>
-        /// Handles the loot action.
-        /// </summary>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private async Task HandleLootAsync(CancellationToken ct)
+        var random = new Random();
+
+        int firstDelay = random.Next(20, 61);
+        _logger.LogDebug("🔥 Initial delay before hook: {Delay}ms", firstDelay);
+        await Task.Delay(firstDelay, ct);
+    
+        for (int i = 0; i < spaceCount; i++)
         {
-            if (!await ActivateWindowAsync(ct).ConfigureAwait(false))
+            _logger.LogInformation("🔥 Sending hook key: Space ({Current}/{Total})", i + 1, spaceCount);
+            await _input.SendKeyAsync(InputKey.Space, ct);
+        
+            if (i < spaceCount - 1)
             {
-                return;
-            }
-
-            _logger.LogInformation("LOOT (stub)");
-            await Task.CompletedTask;
-        }
-
-        /// <summary>
-        /// Sends a WPF key using the input abstraction after mapping it to <see cref="InputKey"/>.
-        /// </summary>
-        /// <param name="wpfKey">WPF key value.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private Task SendWpfKeyAsync(System.Windows.Input.Key wpfKey, CancellationToken ct)
-        {
-            var mapped = InputKeyMapper.ToInputKey(wpfKey);
-            return SendKeyAsync(mapped, ct);
-        }
-
-        /// <summary>
-        /// Sends a key using the input abstraction. Falls back to text for simple keys.
-        /// </summary>
-        /// <param name="key">Key to send.</param>
-        /// <param name="ct">Cancellation token.</param>
-        /// <returns>Task.</returns>
-        private async Task SendKeyAsync(InputKey key, CancellationToken ct)
-        {
-            switch (key)
-            {
-                case InputKey.D1:
-                    await _input.SendTextAsync("1", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D2:
-                    await _input.SendTextAsync("2", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D3:
-                    await _input.SendTextAsync("3", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.D4:
-                    await _input.SendTextAsync("4", ct).ConfigureAwait(false);
-                    return;
-                case InputKey.Space:
-                    await _input.SendTextAsync(" ", ct).ConfigureAwait(false);
-                    return;
-                default:
-                    _logger.LogWarning("InputKey {Key} not supported by current IInput. Extend IInput or SendKeyAsync mapping.", key);
-                    return;
+                int delay = random.Next(20, 61);
+                _logger.LogDebug("🔥 Delay between space: {Delay}ms", delay);
+                await Task.Delay(delay, ct);
             }
         }
+
+        _logger.LogInformation("🔥 HandleHookAsync DONE");
     }
 }

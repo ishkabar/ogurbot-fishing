@@ -62,9 +62,12 @@ public sealed class ProcessQueryService : IProcessQueryService
 
             DateTime? started = null;
             string? path = null;
+            nint hwnd = 0;
 
             try { started = p.StartTime; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read StartTime for PID {Pid}", p.Id); }
             try { path = p.MainModule?.FileName; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read MainModule for PID {Pid}", p.Id); }
+            try { hwnd = p.MainWindowHandle; } catch (Exception ex) { _logger.LogDebug(ex, "Cannot read MainWindowHandle for PID {Pid}", p.Id); }
+
 
             int? width = null, height = null, x = null, y = null;
             try
@@ -91,6 +94,7 @@ public sealed class ProcessQueryService : IProcessQueryService
             list.Add(new ProcessOption
             {
                 Pid = p.Id,
+                Hwnd = hwnd,
                 Display = fullLabel,
                 DisplayShort = shortLabel,
                 StartedAt = started,

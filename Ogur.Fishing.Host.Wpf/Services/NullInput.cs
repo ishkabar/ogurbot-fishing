@@ -1,6 +1,7 @@
 ﻿using System.Threading;
 using System.Threading.Tasks;
 using Ogur.Abstractions;
+using Ogur.Abstractions.Input;
 
 
 namespace Ogur.Fishing.Host.Wpf.Services;
@@ -33,4 +34,13 @@ public sealed class NullInput : IInput
     /// <param name="ct">Cancellation token.</param>
     /// <returns>A completed task.</returns>
     public Task LeftClickAsync(CancellationToken ct) => Task.CompletedTask;
+    
+    /// <summary>
+    /// Sends a single key press (no-op).
+    /// </summary>
+    /// <param name="key">Key to send.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A completed task.</returns>
+    public Task SendKeyAsync(InputKey key, CancellationToken ct) => Task.CompletedTask;
+
 }

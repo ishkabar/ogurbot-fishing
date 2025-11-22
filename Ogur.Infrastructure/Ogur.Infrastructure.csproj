@@ -1,27 +1,28 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
+    <PropertyGroup>
         <TargetFramework>net8.0</TargetFramework>
-    <Nullable>enable</Nullable>
-    <ImplicitUsings>enable</ImplicitUsings>
-    <LangVersion>latest</LangVersion>
-  </PropertyGroup>
-<ItemGroup>
-  <PackageReference Include="Ogur.Abstractions" Version="0.1.4-alpha" />
-  <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.0" />
-  <PackageReference Include="System.Drawing.Common" Version="8.0.0" />
-  <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2" />
-</ItemGroup>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <LangVersion>latest</LangVersion>
+    </PropertyGroup>
+    <ItemGroup>
+        <PackageReference Include="Ogur.Abstractions" Version="0.2.14-alpha"/>
+        <PackageReference Include="Ogur.Core" Version="0.2.55-alpha"/>
+        <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" Version="8.0.2"/>
+        <PackageReference Include="System.Drawing.Common" Version="8.0.2"/>
+        <PackageReference Include="Microsoft.Extensions.Options" Version="8.0.2"/>
+    </ItemGroup>
 
-<ItemGroup>
-  <Reference Include="EButton">
-    <HintPath>Private\lib\EButton\EButton.dll</HintPath>
-    <Private>true</Private>
-  </Reference>
-</ItemGroup>
+    <ItemGroup>
+        <Reference Include="EButton">
+            <HintPath>Private\lib\EButton\EButton.dll</HintPath>
+            <Private>true</Private>
+        </Reference>
+    </ItemGroup>
 
-<ItemGroup>
-  <Folder Include="DependencyInjection\" />
-  <Folder Include="Private\" />
-</ItemGroup>
+    <ItemGroup>
+        <Folder Include="DependencyInjection\"/>
+        <Folder Include="Private\"/>
+    </ItemGroup>
 
 </Project>

@@ -1,11 +1,17 @@
-﻿using System.Threading.Tasks;
+﻿// File: Ogur.Infrastructure/Input/Win32Input.cs
+
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Ogur.Abstractions;
+using Ogur.Core.Metin.Legacy;
+using Ogur.Abstractions.Input;
 
 
 namespace Ogur.Infrastructure.Input;
+
 /// <summary>
-/// Windows input implementation placeholder.
+/// Windows input implementation using HACK.Button for Metin2.
 /// </summary>
 public sealed class Win32Input : IInput
 {
@@ -18,6 +24,24 @@ public sealed class Win32Input : IInput
     public Win32Input(ILogger<Win32Input> logger)
     {
         _logger = logger;
+    }
+
+    /// <summary>
+    /// Sends a single key press using scan codes.
+    /// </summary>
+    /// <param name="key">Key to send.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <returns>A task.</returns>
+    public Task SendKeyAsync(InputKey key, CancellationToken ct)
+    {
+        var scanCode = MapToScanCode(key);
+        
+        _logger.LogDebug("SendKeyAsync({Key}) -> ScanCode {ScanCode}", key, scanCode);
+        
+        // Use PressKey2 for sensitive keys (F-keys, Space)
+        Button.PressKey2(scanCode);
+        
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -54,5 +78,22 @@ public sealed class Win32Input : IInput
     {
         _logger.LogDebug("SendTextAsync(\"{Text}\")", text);
         return Task.CompletedTask;
+    }
+
+    private static Button.BT7 MapToScanCode(InputKey key)
+    {
+        return key switch
+        {
+            InputKey.D1 => Button.BT7.KEY_1,
+            InputKey.D2 => Button.BT7.KEY_2,
+            InputKey.D3 => Button.BT7.KEY_3,
+            InputKey.D4 => Button.BT7.KEY_4,
+            InputKey.F1 => Button.BT7.F1,
+            InputKey.F2 => Button.BT7.F2,
+            InputKey.F3 => Button.BT7.F3,
+            InputKey.F4 => Button.BT7.F4,
+            InputKey.Space => Button.BT7.SPACE,
+            _ => throw new NotSupportedException($"InputKey {key} not mapped to scan code")
+        };
     }
 }

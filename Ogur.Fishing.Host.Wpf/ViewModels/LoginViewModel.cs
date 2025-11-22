@@ -1,112 +1,193 @@
-﻿using System.Threading.Tasks;
-using System.Windows.Input;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
+﻿// File: Ogur.Fishing.Host.Wpf/ViewModels/LoginViewModel.cs
+// Project: Ogur.Fishing.Host.Wpf
+// Namespace: Ogur.Fishing.Host.Wpf.ViewModels
 
-using Ogur.Fishing.Host.Wpf.Navigation;
-using Ogur.Fishing.Host.Wpf.Views;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using Ogur.Fishing.Host.Wpf.ViewModels.Messages;
-using System.ComponentModel.DataAnnotations;
-using System.Threading;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using CommunityToolkit.Mvvm.Messaging;
-using Ogur.Fishing.Host.Wpf.Services;
-using Ogur.Fishing.Host.Wpf.ViewModels.Messages;
-using System.Threading;
-using System.Threading.Tasks;
-using CommunityToolkit.Mvvm.ComponentModel;
-using CommunityToolkit.Mvvm.Input;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Microsoft.Extensions.Logging;
+using Ogur.Abstractions.Hub;
 using Ogur.Fishing.Host.Wpf.ViewModels.Messages;
-
-using Microsoft.Extensions.Logging;
-
 
 namespace Ogur.Fishing.Host.Wpf.ViewModels;
-
 
 /// <summary>
 /// ViewModel that handles user login flow for the host application.
 /// </summary>
-public partial class LoginViewModel : ObservableObject
+public sealed partial class LoginViewModel : ObservableObject
 {
     private readonly ILogger<LoginViewModel> _logger;
     private readonly IAuthService _authService;
+    private readonly ILicenseValidator _licenseValidator; 
     private readonly IMessenger _messenger;
+    private bool _isClearing;
 
-    /// <summary>
-    /// Initializes a new instance of the <see cref="LoginViewModel"/> class.
-    /// </summary>
-    /// <param name="logger">Logger instance.</param>
-    /// <param name="authService">Authentication service.</param>
-    /// <param name="messenger">Messenger for publishing application messages.</param>
-    public LoginViewModel(ILogger<LoginViewModel> logger, IAuthService authService, IMessenger messenger)
+
+    public LoginViewModel(
+        ILogger<LoginViewModel> logger,
+        IAuthService authService,
+        ILicenseValidator licenseValidator,
+        IMessenger messenger)
     {
         _logger = logger;
         _authService = authService;
+        _licenseValidator = licenseValidator;
         _messenger = messenger;
         
-#if DEBUG
-        // 🧪 default credentials for testing
-        Username = "testuser";
-        Password = "testpass";
-#endif
+        // TODO: HARDCODED DEBUG CREDENTIALS
+        Username = "test";
+        Password = "231231";
+
+        // TODO: AUTO LOGIN ON STARTUP
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(500);
+            await LoginAsync(CancellationToken.None);
+        });
     }
 
-    /// <summary>
-    /// Gets or sets the username entered by the user.
-    /// </summary>
-    [ObservableProperty]
-    private string? username;
+    [ObservableProperty] private string? _username;
+
+    [ObservableProperty] private string? _password;
+
+    private string? _errorMessage;
 
     /// <summary>
-    /// Gets or sets the password bound via attached behavior.
+    /// Gets or sets the error message to display.
     /// </summary>
-    [ObservableProperty]
-    private string? password;
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        set
+        {
+            if (_errorMessage != value)
+            {
+                _errorMessage = value;
+                OnPropertyChanged();
+            }
+        }
+    }
 
-    partial void OnUsernameChanged(string? value) => LoginCommand.NotifyCanExecuteChanged();
-    partial void OnPasswordChanged(string? value) => LoginCommand.NotifyCanExecuteChanged();
+    [ObservableProperty] private bool _isLoading;
 
-    /// <summary>
-    /// Command that performs the sign-in operation using the provided credentials.
-    /// Enabled only when both username and password are provided.
-    /// </summary>
+    partial void OnUsernameChanged(string? value)
+    {
+        if (!_isClearing)
+            ErrorMessage = null;
+    
+        LoginCommand.NotifyCanExecuteChanged();
+    }
+
+    partial void OnPasswordChanged(string? value)
+    {
+        if (!_isClearing)
+            ErrorMessage = null;
+    
+        LoginCommand.NotifyCanExecuteChanged();
+    }
+
     [RelayCommand(CanExecute = nameof(CanLogin))]
     private async Task LoginAsync(CancellationToken ct)
     {
-        _logger.LogInformation("Attempting login for user {User}", Username);
-
-        var ok = await _authService.AuthenticateAsync(Username ?? string.Empty, Password ?? string.Empty, ct).ConfigureAwait(false);
-        if (!ok)
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password))
         {
-            _logger.LogWarning("Login failed for user {User}", Username);
+            SetError("Please enter username and password");
             return;
         }
 
-        _logger.LogInformation("Login succeeded for user {User}", Username);
+        SetError(null);
+        SetLoading(true);
 
-        // Publish app-flow event → AppFlowCoordinator will navigate further.
-        _messenger.Send(new LoginSucceededMessage(Username ?? string.Empty));
+        try
+        {
+            _logger.LogInformation("Attempting login for user: {Username}", Username);
+
+            var result = await _authService.LoginAsync(Username, Password, ct);
+
+            if (result.Success)
+            {
+                _logger.LogInformation("Login successful, validating license...");
+        
+                var licenseResult = await _licenseValidator.ValidateAsync(ct);
+        
+                if (!licenseResult.IsValid)
+                {
+                    SetError($"License validation failed: {licenseResult.ErrorMessage}");
+                    _authService.Logout();
+                    return;
+                }
+        
+                _logger.LogInformation("License valid until: {ExpiresAt}", licenseResult.ExpiresAt);
+        
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    _messenger.Send(new LoginSucceededMessage(result.Username));
+                });
+            }
+            else
+            {
+                var errorMsg = result.ErrorMessage ?? "Login failed";
+
+                if (errorMsg.StartsWith("{"))
+                {
+                    try
+                    {
+                        var json = System.Text.Json.JsonDocument.Parse(errorMsg);
+                        if (json.RootElement.TryGetProperty("error", out var errorProp))
+                        {
+                            errorMsg = errorProp.GetString() ?? errorMsg;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Failed to parse error JSON");
+                    }
+                }
+
+                SetError(errorMsg);
+                _logger.LogWarning("Login failed for user {Username}: {Error}", Username, errorMsg);
+            }
+        }
+        catch (Exception ex)
+        {
+            SetError($"Login error: {ex.Message}");
+            _logger.LogError(ex, "Login exception for user: {Username}", Username);
+        }
+        finally
+        {
+            SetLoading(false);
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                _isClearing = true;
+                Password = string.Empty;
+                _isClearing = false;
+            });
+        }
     }
 
-    /// <summary>
-    /// Determines whether the login command can execute based on input completeness.
-    /// </summary>
-    /// <returns>True if both username and password are non-empty; otherwise false.</returns>
     private bool CanLogin() =>
         !string.IsNullOrWhiteSpace(Username) &&
-        !string.IsNullOrEmpty(Password);
+        !string.IsNullOrWhiteSpace(Password) &&
+        !IsLoading;
+
+    private void SetError(string? message)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            ErrorMessage = message;
+        });
+    }
+
+    private void SetLoading(bool loading)
+    {
+        Application.Current.Dispatcher.Invoke(() =>
+        {
+            IsLoading = loading;
+            LoginCommand.NotifyCanExecuteChanged();
+        });
+    }
 }

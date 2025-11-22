@@ -28,4 +28,9 @@ public interface ISessionState
     /// Gets or sets the currently selected game process.
     /// </summary>
     ProcessOption? SelectedProcess { get; set; }
+    
+    /// <summary>
+    /// Memory address for bite detection (as decimal long).
+    /// </summary>
+    long MemoryAddress { get; set; }
 }

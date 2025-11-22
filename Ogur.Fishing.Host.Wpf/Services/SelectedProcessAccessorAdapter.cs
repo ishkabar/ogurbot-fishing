@@ -1,74 +1,55 @@
-﻿using Ogur.Abstractions;
-using System;
+﻿// File: Ogur.Fishing.Host.Wpf/Services/SelectedProcessAccessorAdapter.cs
+// Project: Ogur.Fishing.Host.Wpf
+// Namespace: Ogur.Fishing.Host.Wpf.Services
 
-namespace Ogur.Fishing.Host.Wpf.Services
+using System.Diagnostics.CodeAnalysis;
+using Ogur.Abstractions;
+
+namespace Ogur.Fishing.Host.Wpf.Services;
+
+/// <summary>
+/// Adapter that bridges ISessionState to ISelectedProcessAccessor.
+/// </summary>
+public sealed class SelectedProcessAccessorAdapter : ISelectedProcessAccessor
 {
+    private readonly ISessionState _session;
+
     /// <summary>
-    /// Adapts host session state to a cross-layer selected process accessor.
+    /// Initializes a new instance of the <see cref="SelectedProcessAccessorAdapter"/> class.
     /// </summary>
-    public sealed class SelectedProcessAccessorAdapter : ISelectedProcessAccessor
+    /// <param name="session">Session state instance.</param>
+    public SelectedProcessAccessorAdapter(ISessionState session)
     {
-        private readonly ISessionState _session;
-
-        /// <summary>
-        /// Initializes a new instance of the <see cref="SelectedProcessAccessorAdapter"/> class.
-        /// </summary>
-        /// <param name="session">Host session state.</param>
-        public SelectedProcessAccessorAdapter(ISessionState session)
-        {
-            _session = session;
-        }
-
-        /// <summary>
-        /// Tries to get the currently selected process.
-        /// </summary>
-        /// <param name="info">Selected process info when available.</param>
-        /// <returns>True if available; otherwise false.</returns>
-        public bool TryGetSelectedProcess(out SelectedProcessInfo? info)
-        {
-            var p = _session.SelectedProcess;
-            if (p is null)
-            {
-                info = null;
-                return false;
-            }
-
-            var hwnd = 0;
-            var hwndProp = p.GetType().GetProperty("Hwnd")
-                         ?? p.GetType().GetProperty("Handle")
-                         ?? p.GetType().GetProperty("MainWindowHandle");
-
-            if (hwndProp is not null)
-            {
-                var value = hwndProp.GetValue(p);
-                if (value is IntPtr ip)
-                    hwnd = unchecked(ip.ToInt32());
-                else if (value is nint nip)
-                    hwnd = unchecked((int)nip);
-                else if (value is long l)
-                    hwnd = unchecked((int)l);
-                else if (value is int i)
-                    hwnd = i;
-            }
-
-            var pid = 0;
-            var pidProp = p.GetType().GetProperty("ProcessId") ?? p.GetType().GetProperty("Id");
-            if (pidProp is not null && pidProp.GetValue(p) is int id)
-            {
-                pid = id;
-            }
-
-            var title = p.GetType().GetProperty("WindowTitle")?.GetValue(p) as string
-                        ?? p.GetType().GetProperty("Title")?.GetValue(p) as string
-                        ?? p.GetType().GetProperty("MainWindowTitle")?.GetValue(p) as string;
-
-            info = new SelectedProcessInfo
-            {
-                ProcessId = pid,
-                Hwnd = hwnd,
-                Title = string.IsNullOrWhiteSpace(title) ? null : title
-            };
-            return pid > 0;
-        }
+        _session = session;
     }
+
+    /// <summary>
+    /// Tries to get the currently selected process information.
+    /// </summary>
+    /// <param name="info">Selected process info when available.</param>
+    /// <returns>True if a process is selected; otherwise false.</returns>
+    public bool TryGetSelectedProcess([NotNullWhen(true)] out SelectedProcessInfo? info)
+    {
+        var proc = _session.SelectedProcess;
+        
+        if (proc is null || proc.Hwnd == 0)
+        {
+            info = null;
+            return false;
+        }
+
+        info = new SelectedProcessInfo
+        {
+            ProcessId = proc.Pid,
+            Hwnd = proc.Hwnd,  // ✅ ZMIENIONE Z WindowHandle
+            Title = proc.Display
+        };
+
+        return true;
+    }
+
+    /// <summary>
+    /// Gets the memory address for bite detection from session state.
+    /// </summary>
+    public long MemoryAddress => _session.MemoryAddress;
 }

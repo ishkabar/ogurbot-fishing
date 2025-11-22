@@ -54,6 +54,16 @@ public sealed partial class ServerSelectViewModel : ObservableObject
             Id: "tamidia2",
             Name: "Tamidia2 S2",
             IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/tamidia2.png"));
+            
+            // TODO: AUTO SELECT FIRST SERVER ON STARTUP
+        _ = Task.Run(async () =>
+        {
+            await Task.Delay(500);
+            if (Servers.Count > 0)
+            {
+                Application.Current.Dispatcher.Invoke(() => SelectServer(Servers[0]));
+            }
+        });
     }
 
     /// <summary>

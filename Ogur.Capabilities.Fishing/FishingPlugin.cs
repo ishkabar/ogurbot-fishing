@@ -10,19 +10,19 @@ namespace Ogur.Capabilities.Fishing;
 /// <summary>
 /// Plugin exposing the Fishing capability.
 /// </summary>
-public sealed class FishingPlugin : IBotPluginV1
+public sealed class FishingPlugin : IApplicationPlugin
 {
     /// <summary>
     /// Gets the plugin name.
     /// </summary>
     public string Name => "FishingPlugin";
 
-    private readonly List<IBotCapability> _capabilities = new();
+    private readonly List<IApplicationCapability> _capabilities = new();
 
     /// <summary>
     /// Gets the set of bot capabilities provided by this plugin.
     /// </summary>
-    public IEnumerable<IBotCapability> Capabilities => _capabilities;
+    public IEnumerable<IApplicationCapability> Capabilities => _capabilities;
 
     /// <summary>
     /// Initializes the plugin with the given service provider.

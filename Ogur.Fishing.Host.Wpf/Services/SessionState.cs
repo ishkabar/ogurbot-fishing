@@ -30,4 +30,6 @@ public sealed class SessionState : ISessionState
     /// Gets or sets the currently selected game process.
     /// </summary>
     public ProcessOption? SelectedProcess { get; set; }
+    
+    public long MemoryAddress { get; set; }
 }

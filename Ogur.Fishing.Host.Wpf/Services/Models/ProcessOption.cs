@@ -10,6 +10,11 @@ public sealed class ProcessOption
     /// Gets or sets the OS process id.
     /// </summary>
     public int Pid { get; init; }
+    
+    /// <summary>
+    /// Gets or sets the window handle (HWND).
+    /// </summary>
+    public nint Hwnd { get; init; } 
 
     /// <summary>
     /// Gets or sets the display label (process name with additional info).

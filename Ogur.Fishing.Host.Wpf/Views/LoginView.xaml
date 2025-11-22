@@ -7,7 +7,6 @@
              xmlns:beh="clr-namespace:Ogur.Fishing.Host.Wpf.Views.Behaviors"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:LoginViewModel}">
-  <!-- Full-window center; card szeroka jak w screenie -->
   <Grid>
     <Grid.RowDefinitions>
       <RowDefinition Height="*"/>
@@ -31,14 +30,22 @@
         <PasswordBox beh:BindablePassword.Attach="True"
                      beh:BindablePassword.BoundPassword="{Binding Password, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
 
-        <TextBlock Margin="0,8,0,0"
+
+        
+        <!-- Error Message with visibility logic -->
+        <TextBlock Margin="0,12,0,0"
                    Foreground="{StaticResource Brush.Error}"
+                   FontSize="14"
+                   TextWrapping="Wrap"
                    Text="{Binding ErrorMessage}">
           <TextBlock.Style>
             <Style TargetType="TextBlock">
               <Setter Property="Visibility" Value="Visible"/>
               <Style.Triggers>
-                <DataTrigger Binding="{Binding Text, RelativeSource={RelativeSource Self}}" Value="">
+                <DataTrigger Binding="{Binding ErrorMessage}" Value="{x:Null}">
+                  <Setter Property="Visibility" Value="Collapsed"/>
+                </DataTrigger>
+                <DataTrigger Binding="{Binding ErrorMessage}" Value="">
                   <Setter Property="Visibility" Value="Collapsed"/>
                 </DataTrigger>
               </Style.Triggers>
@@ -46,12 +53,25 @@
           </TextBlock.Style>
         </TextBlock>
 
-        <StackPanel Orientation="Horizontal" Margin="0,16,0,0" HorizontalAlignment="Right">
-          <Button Content="Sign in"
+        <!-- Buttons -->
+        <Grid Margin="0,16,0,0">
+          <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="Auto"/>
+          </Grid.ColumnDefinitions>
+
+          <Button Grid.Column="0"
+                  Content="Register"
+                  Style="{StaticResource SecondaryButton}"
+                  Click="RegisterButton_OnClick"/>
+
+          <Button Grid.Column="2"
+                  Content="Sign in"
                   Style="{StaticResource PrimaryButton}"
                   Command="{Binding LoginCommand}"
                   IsDefault="True"/>
-        </StackPanel>
+        </Grid>
       </StackPanel>
     </Border>
   </Grid>
