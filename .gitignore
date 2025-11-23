@@ -62,3 +62,11 @@ local-packages/
 *.dll
 *.exe
 *.pdb
+
+publish/
+publish-fd/
+publish-sc/
+*.rar
+*.zip
+*.7z
+*.tar
