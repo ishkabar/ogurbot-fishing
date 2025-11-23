@@ -82,7 +82,7 @@ public static class AppStartup
         // Custom Hub Integration Services
         builder.Services.AddSingleton<ILicenseManager, LicenseManager>();
         builder.Services.AddSingleton<HubCommandHandler>();
-        builder.Services.AddHostedService<HubIntegrationService>();
+        builder.Services.AddSingleton<HubIntegrationService>();
         
         builder.Services.AddTransient<UpdateRequiredView>();
         builder.Services.AddTransient<UpdateRequiredViewModel>();

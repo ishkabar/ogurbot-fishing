@@ -8,8 +8,11 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Ogur.Abstractions.Hub;
+using Ogur.Fishing.Host.Wpf.Navigation;
 using Ogur.Fishing.Host.Wpf.ViewModels;
 using Ogur.Fishing.Host.Wpf.Views;
+using Microsoft.Extensions.DependencyInjection;
+
 
 namespace Ogur.Fishing.Host.Wpf.Services.HubIntegration;
 
@@ -26,6 +29,15 @@ public sealed class HubIntegrationService : BackgroundService
     private readonly ILogger<HubIntegrationService> _logger;
     private readonly IServiceProvider _serviceProvider;
 
+    /// <summary>
+    /// Event for synchronizing startup checks.
+    /// </summary>
+    public ManualResetEventSlim StartupComplete { get; } = new(false);
+
+    /// <summary>
+    /// Indicates whether application is blocked by required update.
+    /// </summary>
+    public bool RequiredUpdateBlocked { get; private set; }
 
     /// <summary>
     /// Initializes a new instance of the <see cref="HubIntegrationService"/> class.
@@ -53,52 +65,83 @@ public sealed class HubIntegrationService : BackgroundService
     {
         _logger.LogInformation("Hub integration service starting");
 
-        // ✅ Sprawdź aktualizacje
-        var updateResult = await _updateChecker.CheckForUpdatesAsync(
-            HubConstants.ApplicationVersion,
-            stoppingToken);
-
-    
-        if (updateResult.IsUpdateAvailable && updateResult.IsRequired)
+        try
         {
-            _logger.LogCritical(
-                "REQUIRED UPDATE AVAILABLE: {Current} -> {Latest}",
-                updateResult.CurrentVersion,
-                updateResult.LatestVersion);
+            // Check for updates before allowing UI to proceed
+            var updateResult = await _updateChecker.CheckForUpdatesAsync(
+                HubConstants.ApplicationVersion,
+                stoppingToken);
 
-            // Pokaż UpdateRequiredView
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            if (updateResult.IsUpdateAvailable && updateResult.IsRequired)
             {
-                var mainWindow = System.Windows.Application.Current.MainWindow;
-                if (mainWindow != null)
+                _logger.LogCritical(
+                    "REQUIRED UPDATE AVAILABLE: {Current} -> {Latest}",
+                    updateResult.CurrentVersion,
+                    updateResult.LatestVersion);
+
+                RequiredUpdateBlocked = true;
+
+                // ✅ Create MainWindow and show UpdateRequiredView synchronously
+                await System.Windows.Application.Current.Dispatcher.InvokeAsync(() =>
                 {
+                    // Create MainWindow if not exists
+                    if (System.Windows.Application.Current.MainWindow == null)
+                    {
+                        var mainWindow = new System.Windows.Window
+                        {
+                            Width = 800,
+                            Height = 600,
+                            WindowStartupLocation = System.Windows.WindowStartupLocation.CenterScreen,
+                            Title = "Ogur - Fishing Planet - Update Required",
+                            Style = (System.Windows.Style)System.Windows.Application.Current.Resources[
+                                "BaseWindowStyle"]
+                        };
+
+                        System.Windows.Application.Current.MainWindow = mainWindow;
+                        mainWindow.Show();
+                    }
+
+                    // Create and initialize ViewModel
                     var viewModel = _serviceProvider.GetRequiredService<UpdateRequiredViewModel>();
+
                     viewModel.Initialize(
                         updateResult.CurrentVersion,
                         updateResult.LatestVersion,
                         updateResult.DownloadUrl,
                         updateResult.ReleaseNotes);
 
+                    // Create view and set DataContext
                     var view = _serviceProvider.GetRequiredService<UpdateRequiredView>();
                     view.DataContext = viewModel;
 
-                    mainWindow.Content = view;
-                }
-            });
+                    // Show view in MainWindow
+                    System.Windows.Application.Current.MainWindow.Content = view;
 
-            return;
-        }
+                    _logger.LogInformation(
+                        "UpdateRequiredView shown: Current={Current}, Latest={Latest}",
+                        viewModel.CurrentVersion,
+                        viewModel.LatestVersion);
+                });
 
-        if (updateResult.IsUpdateAvailable)
-        {
-            _logger.LogInformation(
-                "Optional update available: {Current} -> {Latest}",
-                updateResult.CurrentVersion,
-                updateResult.LatestVersion);
-        }
+                // Signal startup complete AFTER UI is ready
+                StartupComplete.Set();
 
-        try
-        {
+                // Keep service running to show the update view
+                await Task.Delay(Timeout.Infinite, stoppingToken);
+                return;
+            }
+
+            if (updateResult.IsUpdateAvailable)
+            {
+                _logger.LogInformation(
+                    "Optional update available: {Current} -> {Latest}",
+                    updateResult.CurrentVersion,
+                    updateResult.LatestVersion);
+            }
+
+            // Signal startup complete - all checks passed
+            StartupComplete.Set();
+
             await _telemetryReporter.ReportEventAsync("ApplicationStarted", new
             {
                 Version = typeof(App).Assembly.GetName().Version?.ToString(),
@@ -121,6 +164,7 @@ public sealed class HubIntegrationService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Hub integration service failed");
+            StartupComplete.Set(); // Unlock even on error
         }
         finally
         {

@@ -45,9 +45,120 @@ public sealed class FishingOptions
     public int ChatWaitTimeoutMs { get; init; } = 5000;
 
     /// <summary>
+    /// Gets or sets timing options for fishing automation.
+    /// </summary>
+    public TimingOptions Timing { get; init; } = new();
+
+    /// <summary>
     /// Gets or sets the legacy memory-based detection options.
     /// </summary>
     public LegacyMemoryOptions Legacy { get; init; } = new();
+
+    /// <summary>
+    /// Timing configuration for fishing cycle delays.
+    /// </summary>
+    public sealed class TimingOptions
+    {
+        /// <summary>
+        /// Gets or sets minimum cast animation delay in milliseconds.
+        /// </summary>
+        public int CastAnimationMinMs { get; init; } = 1200;
+
+        /// <summary>
+        /// Gets or sets maximum cast animation delay in milliseconds.
+        /// </summary>
+        public int CastAnimationMaxMs { get; init; } = 2000;
+
+        /// <summary>
+        /// Gets or sets minimum hook to animation delay in milliseconds.
+        /// </summary>
+        public int HookToAnimationMinMs { get; init; } = 500;
+
+        /// <summary>
+        /// Gets or sets maximum hook to animation delay in milliseconds.
+        /// </summary>
+        public int HookToAnimationMaxMs { get; init; } = 801;
+
+        /// <summary>
+        /// Gets or sets minimum pull animation delay in milliseconds.
+        /// </summary>
+        public int PullAnimationMinMs { get; init; } = 1500;
+
+        /// <summary>
+        /// Gets or sets maximum pull animation delay in milliseconds.
+        /// </summary>
+        public int PullAnimationMaxMs { get; init; } = 2201;
+
+        /// <summary>
+        /// Gets or sets minimum safety cooldown delay in milliseconds.
+        /// </summary>
+        public int SafetyCooldownMinMs { get; init; } = 4250;
+
+        /// <summary>
+        /// Gets or sets maximum safety cooldown delay in milliseconds.
+        /// </summary>
+        public int SafetyCooldownMaxMs { get; init; } = 4801;
+
+        /// <summary>
+        /// Gets or sets minimum timeout cooldown delay in milliseconds.
+        /// </summary>
+        public int TimeoutCooldownMinMs { get; init; } = 1000;
+
+        /// <summary>
+        /// Gets or sets maximum timeout cooldown delay in milliseconds.
+        /// </summary>
+        public int TimeoutCooldownMaxMs { get; init; } = 1500;
+
+        /// <summary>
+        /// Gets or sets minimum delay before cast in milliseconds.
+        /// </summary>
+        public int PreCastDelayMinMs { get; init; } = 150;
+
+        /// <summary>
+        /// Gets or sets maximum delay before cast in milliseconds.
+        /// </summary>
+        public int PreCastDelayMaxMs { get; init; } = 150;
+
+        /// <summary>
+        /// Gets or sets minimum delay after window activation in milliseconds.
+        /// </summary>
+        public int PostActivationDelayMinMs { get; init; } = 150;
+
+        /// <summary>
+        /// Gets or sets maximum delay after window activation in milliseconds.
+        /// </summary>
+        public int PostActivationDelayMaxMs { get; init; } = 150;
+
+        /// <summary>
+        /// Gets or sets minimum delay after bait selection in milliseconds.
+        /// </summary>
+        public int PostBaitDelayMinMs { get; init; } = 200;
+
+        /// <summary>
+        /// Gets or sets maximum delay after bait selection in milliseconds.
+        /// </summary>
+        public int PostBaitDelayMaxMs { get; init; } = 200;
+
+        /// <summary>
+        /// Gets or sets minimum delay before first hook in milliseconds.
+        /// </summary>
+        public int PreHookDelayMinMs { get; init; } = 20;
+
+        /// <summary>
+        /// Gets or sets maximum delay before first hook in milliseconds.
+        /// </summary>
+        public int PreHookDelayMaxMs { get; init; } = 61;
+
+        /// <summary>
+        /// Gets or sets minimum delay between hook presses in milliseconds.
+        /// </summary>
+        public int BetweenHookDelayMinMs { get; init; } = 20;
+
+        /// <summary>
+        /// Gets or sets maximum delay between hook presses in milliseconds.
+        /// </summary>
+        public int BetweenHookDelayMaxMs { get; init; } = 61;
+    }
 
     /// <summary>
     /// Legacy memory-based bite detection options.

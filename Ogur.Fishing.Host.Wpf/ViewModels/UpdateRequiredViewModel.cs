@@ -1,5 +1,6 @@
 ﻿// File: Ogur.Fishing.Host.Wpf/ViewModels/UpdateRequiredViewModel.cs
 
+using System;
 using System.Diagnostics;
 using System.Windows;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -36,10 +37,24 @@ public sealed partial class UpdateRequiredViewModel : ObservableObject
 
     public void Initialize(string currentVersion, string latestVersion, string downloadUrl, string? releaseNotes)
     {
+        _logger.LogInformation("🔥 Initialize called: Current={Current}, Latest={Latest}", currentVersion, latestVersion);
+
+        
         CurrentVersion = currentVersion;
         LatestVersion = latestVersion;
         DownloadUrl = downloadUrl;
         ReleaseNotes = releaseNotes;
+        
+        // ✅ Notify that HasReleaseNotes might have changed
+        OnPropertyChanged(nameof(HasReleaseNotes));
+        _logger.LogInformation("🔥 After set: CurrentVersion={Current}, LatestVersion={Latest}", CurrentVersion, LatestVersion);
+
+    }
+
+    // ✅ Notify HasReleaseNotes when ReleaseNotes changes
+    partial void OnReleaseNotesChanged(string? value)
+    {
+        OnPropertyChanged(nameof(HasReleaseNotes));
     }
 
     [RelayCommand]

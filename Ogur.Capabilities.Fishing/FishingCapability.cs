@@ -128,81 +128,89 @@ public sealed class FishingCapability : IApplicationCapability
     }
 
     private async Task FishingLoopAsync(CancellationToken ct)
+{
+    _logger.LogInformation("FishingLoopAsync() STARTED");
+
+    try
     {
-        _logger.LogInformation("FishingLoopAsync() STARTED");
-
-        try
+        while (!ct.IsCancellationRequested && Status == CapabilityStatus.Running)
         {
-            while (!ct.IsCancellationRequested && Status == CapabilityStatus.Running)
+            var random = new Random();
+
+            // 1. CAST
+            _logger.LogInformation("[LOOP] Publishing fishing.cast.request");
+            _eventBus.Publish("fishing.cast.request", "Casting rod");
+
+            int castAnimation = random.Next(
+                _options.Timing.CastAnimationMinMs, 
+                _options.Timing.CastAnimationMaxMs);
+            _logger.LogInformation("[LOOP] Waiting for cast + animation: {Delay}ms", castAnimation);
+            await Task.Delay(castAnimation, ct);
+
+            // 2. WAITING
+            _logger.LogInformation("[LOOP] Publishing fishing.waiting");
+            _eventBus.Publish("fishing.waiting", "Waiting for bite");
+
+            var timeout = TimeSpan.FromSeconds(_options.BiteTimeoutSeconds);
+            _logger.LogInformation("[LOOP] START WaitForBiteAsync (memory scan START)");
+
+            int spaceCount = await _signal.WaitForBiteAsync(timeout, ct);
+
+            _logger.LogInformation("[LOOP] END WaitForBiteAsync (memory scan STOP) - returned: {SpaceCount}", spaceCount);
+
+            if (spaceCount > 0)
             {
-                // ✅ JEDEN Random na początku pętli
-                var random = new Random();
+                _logger.LogInformation("[LOOP] BITE! Space count: {Count}", spaceCount);
+                _eventBus.Publish("fishing.bite", $"Bite detected (hooks: {spaceCount})");
 
-                // 1. CAST (przynęta + space)
-                _logger.LogInformation("[LOOP] Publishing fishing.cast.request");
-                _eventBus.Publish("fishing.cast.request", "Casting rod");
+                _logger.LogInformation("[LOOP] Publishing fishing.hook.request (count={Count})", spaceCount);
+                _eventBus.Publish("fishing.hook.request", $"Hooking fish (count: {spaceCount})");
 
-                int castAnimation = random.Next(1200, 2000);
-                _logger.LogInformation("[LOOP] Waiting for cast + animation: {Delay}ms", castAnimation);
-                await Task.Delay(castAnimation, ct);
+                int hookToAnimation = random.Next(
+                    _options.Timing.HookToAnimationMinMs, 
+                    _options.Timing.HookToAnimationMaxMs);
+                _logger.LogInformation("[LOOP] Delay hook → animation: {Delay}ms", hookToAnimation);
+                await Task.Delay(hookToAnimation, ct);
 
-                // 2. WAITING - 🔍 START skanowania pamięci
-                _logger.LogInformation("[LOOP] Publishing fishing.waiting");
-                _eventBus.Publish("fishing.waiting", "Waiting for bite");
+                int pullAnimation = random.Next(
+                    _options.Timing.PullAnimationMinMs, 
+                    _options.Timing.PullAnimationMaxMs);
+                _logger.LogInformation("[LOOP] Pull animation: {Delay}ms", pullAnimation);
+                await Task.Delay(pullAnimation, ct);
 
-                var timeout = TimeSpan.FromSeconds(13);
-                _logger.LogInformation("[LOOP]  START WaitForBiteAsync (memory scan START)");
+                int safetyCooldown = random.Next(
+                    _options.Timing.SafetyCooldownMinMs, 
+                    _options.Timing.SafetyCooldownMaxMs);
+                _logger.LogInformation("[LOOP] Safety cooldown: {Delay}ms", safetyCooldown);
+                await Task.Delay(safetyCooldown, ct);
 
-                int spaceCount = await _signal.WaitForBiteAsync(timeout, ct);
+                _logger.LogInformation("[LOOP] ✅ All post-hook delays DONE");
+            }
+            else
+            {
+                _logger.LogWarning("[LOOP] TIMEOUT - no bite");
+                _eventBus.Publish("fishing.timeout", "No bite detected");
 
-                _logger.LogInformation("[LOOP]  END WaitForBiteAsync (memory scan STOP) - returned: {SpaceCount}",
-                    spaceCount);
-
-                if (spaceCount > 0)
-                {
-                    _logger.LogInformation("[LOOP] BITE! Space count: {Count}", spaceCount);
-                    _eventBus.Publish("fishing.bite", $"Bite detected (hooks: {spaceCount})");
-
-                    _logger.LogInformation("[LOOP] Publishing fishing.hook.request (count={Count})", spaceCount);
-                    _eventBus.Publish("fishing.hook.request", $"Hooking fish (count: {spaceCount})");
-
-                    int hookToAnimation = random.Next(500, 801);
-                    _logger.LogInformation("[LOOP]  Delay hook → animation: {Delay}ms", hookToAnimation);
-                    await Task.Delay(hookToAnimation, ct);
-
-                    int pullAnimation = random.Next(1500, 2201);
-                    _logger.LogInformation("[LOOP]  Pull animation: {Delay}ms", pullAnimation);
-                    await Task.Delay(pullAnimation, ct);
-
-                    int safetyCooldown = random.Next(5450, 7001);
-                    _logger.LogInformation("[LOOP]  Safety cooldown: {Delay}ms", safetyCooldown);
-                    await Task.Delay(safetyCooldown, ct);
-
-                    _logger.LogInformation("[LOOP] ✅ All post-hook delays DONE");
-                }
-                else
-                {
-                    _logger.LogWarning("[LOOP] TIMEOUT - no bite");
-                    _eventBus.Publish("fishing.timeout", "No bite detected");
-
-                    int timeoutCooldown = random.Next(1000, 1500);
-                    _logger.LogInformation("[LOOP]  Timeout cooldown: {Delay}ms", timeoutCooldown);
-                    await Task.Delay(timeoutCooldown, ct);
-                }
+                int timeoutCooldown = random.Next(
+                    _options.Timing.TimeoutCooldownMinMs, 
+                    _options.Timing.TimeoutCooldownMaxMs);
+                _logger.LogInformation("[LOOP] Timeout cooldown: {Delay}ms", timeoutCooldown);
+                await Task.Delay(timeoutCooldown, ct);
             }
         }
-        catch (OperationCanceledException)
-        {
-            _logger.LogInformation("FishingLoopAsync() CANCELLED");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "FishingLoopAsync() ERROR");
-            _eventBus.Publish("fishing.error", ex.Message);
-        }
-        finally
-        {
-            _logger.LogInformation("FishingLoopAsync() ENDED");
-        }
     }
+    catch (OperationCanceledException)
+    {
+        _logger.LogInformation("FishingLoopAsync() CANCELLED");
+    }
+    catch (Exception ex)
+    {
+        _logger.LogError(ex, "FishingLoopAsync() ERROR");
+        _eventBus.Publish("fishing.error", ex.Message);
+    }
+    finally
+    {
+        _logger.LogInformation("FishingLoopAsync() ENDED");
+    }
+}
 }

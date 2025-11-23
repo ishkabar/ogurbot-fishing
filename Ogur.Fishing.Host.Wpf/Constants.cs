@@ -8,5 +8,5 @@ internal static class HubConstants
 {
     public const string ApiKey = "8wMvEhCz7bYBxpmXFE8yxJmKzHzTVMMHNzy80ox5foY=";
     public const string ApplicationName = "OgurFishing";
-    public const string ApplicationVersion = "1.3.0";
+    public const string ApplicationVersion = "1.3.2";
 }

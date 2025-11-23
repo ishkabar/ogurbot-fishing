@@ -7,10 +7,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using Ogur.Abstractions;
 using Ogur.Abstractions.Input;
 using Ogur.Abstractions.Windows;
 using Ogur.Capabilities.Fishing;
+using Ogur.Infrastructure.configuration;
 
 namespace Ogur.Fishing.Host.Wpf.Services;
 
@@ -28,18 +30,23 @@ public sealed class FishingActionExecutor : BackgroundService
     /// <summary>
     /// Initializes a new instance of the <see cref="FishingActionExecutor"/> class.
     /// </summary>
+    private readonly Random _random = new();
+    private readonly FishingOptions _options;
+
     public FishingActionExecutor(
         ILogger<FishingActionExecutor> logger,
         FishingCapability fishing,
         IInput input,
         IWindowActivator activator,
-        ISessionState session)
+        ISessionState session,
+        IOptions<FishingOptions> options)  // ← Dodaj
     {
         _logger = logger;
         _fishing = fishing;
         _input = input;
         _activator = activator;
         _session = session;
+        _options = options.Value;  // ← Dodaj
     }
 
     /// <summary>
@@ -120,81 +127,88 @@ public sealed class FishingActionExecutor : BackgroundService
         return result;
     }
 
-    private async Task HandleCastAsync(CancellationToken ct)
-    {
-        _logger.LogInformation("🔥 HandleCastAsync START");
-        await Task.Delay(150, ct);
-        
-        _logger.LogInformation("🔥 Activating window...");
-        if (!await ActivateWindowAsync(ct))
-        {
-            _logger.LogWarning("🔥 HandleCastAsync ABORTED - window activation failed");
-            return;
-        }
-        _logger.LogInformation("🔥 Window activated");
-        
-        _logger.LogInformation("🔥 Waiting 100ms after window activation");
-        await Task.Delay(150, ct);
-
-        var bait = _session.SelectedBait;
-        _logger.LogInformation("🔥 SelectedBait: {Bait}", bait?.DisplayName ?? "NULL");
+private async Task HandleCastAsync(CancellationToken ct)
+{
+    _logger.LogInformation("🔥 HandleCastAsync START");
     
-        if (bait is not null)
-        {
-            var baitKey = InputKeyMapper.ToInputKey(bait.Key);
-            _logger.LogInformation("🔥 Sending bait key: {Key}", baitKey);
-        
-            await _input.SendKeyAsync(baitKey, ct);
-        
-            _logger.LogInformation("🔥 Waiting 200ms after bait");
-            await Task.Delay(200, ct);
-        }
+    int preDelay = _random.Next(
+        _options.Timing.PreCastDelayMinMs,
+        _options.Timing.PreCastDelayMaxMs);
+    await Task.Delay(preDelay, ct);
+    
+    _logger.LogInformation("🔥 Activating window...");
+    if (!await ActivateWindowAsync(ct))
+    {
+        _logger.LogWarning("🔥 HandleCastAsync ABORTED - window activation failed");
+        return;
+    }
+    _logger.LogInformation("🔥 Window activated");
+    
+    int postActivation = _random.Next(
+        _options.Timing.PostActivationDelayMinMs,
+        _options.Timing.PostActivationDelayMaxMs);
+    await Task.Delay(postActivation, ct);
 
-        _logger.LogInformation("🔥 Sending cast key: Space");
+    var bait = _session.SelectedBait;
+    _logger.LogInformation("🔥 SelectedBait: {Bait}", bait?.DisplayName ?? "NULL");
+
+    if (bait is not null)
+    {
+        var baitKey = InputKeyMapper.ToInputKey(bait.Key);
+        _logger.LogInformation("🔥 Sending bait key: {Key}", baitKey);
+        
+        await _input.SendKeyAsync(baitKey, ct);
+        
+        int postBait = _random.Next(
+            _options.Timing.PostBaitDelayMinMs,
+            _options.Timing.PostBaitDelayMaxMs);
+        await Task.Delay(postBait, ct);
+    }
+
+    _logger.LogInformation("🔥 Sending cast key: Space");
+    await _input.SendKeyAsync(InputKey.Space, ct);
+
+    _logger.LogInformation("🔥 HandleCastAsync DONE");
+}
+
+private async Task HandleHookAsync(ApplicationEvent e, CancellationToken ct)
+{
+    _logger.LogInformation("🔥 HandleHookAsync START");
+
+    int spaceCount = 1;
+
+    if (!string.IsNullOrEmpty(e.Message) && int.TryParse(e.Message, out int parsed) && parsed >= 1 && parsed <= 3)
+    {
+        spaceCount = parsed;
+    }
+    else
+    {
+        _logger.LogWarning("🔥 Failed to parse space count from message: '{Message}', using default: 1", e.Message);
+    }
+
+    _logger.LogInformation("🔥 Space count: {Count}", spaceCount);
+
+    int firstDelay = _random.Next(
+        _options.Timing.PreHookDelayMinMs,
+        _options.Timing.PreHookDelayMaxMs);
+    _logger.LogDebug("🔥 Initial delay before hook: {Delay}ms", firstDelay);
+    await Task.Delay(firstDelay, ct);
+
+    for (int i = 0; i < spaceCount; i++)
+    {
+        _logger.LogInformation("🔥 Sending hook key: Space ({Current}/{Total})", i + 1, spaceCount);
         await _input.SendKeyAsync(InputKey.Space, ct);
-    
-        _logger.LogInformation("🔥 HandleCastAsync DONE");
-    }
-
-    
-    
-    private async Task HandleHookAsync(ApplicationEvent e, CancellationToken ct)  // ✅ ZMIEŃ NA ApplicationEvent
-    {
-        _logger.LogInformation("🔥 HandleHookAsync START");
-    
-        int spaceCount = 1;
-    
-        // ✅ FIX: Najprostsza wersja TryParse
-        if (!string.IsNullOrEmpty(e.Message) && int.TryParse(e.Message, out int parsed) && parsed >= 1 && parsed <= 3)
-        {
-            spaceCount = parsed;
-        }
-        else
-        {
-            _logger.LogWarning("🔥 Failed to parse space count from message: '{Message}', using default: 1", e.Message);
-        }
-    
-        _logger.LogInformation("🔥 Space count: {Count}", spaceCount);
-
-        var random = new Random();
-
-        int firstDelay = random.Next(20, 61);
-        _logger.LogDebug("🔥 Initial delay before hook: {Delay}ms", firstDelay);
-        await Task.Delay(firstDelay, ct);
-    
-        for (int i = 0; i < spaceCount; i++)
-        {
-            _logger.LogInformation("🔥 Sending hook key: Space ({Current}/{Total})", i + 1, spaceCount);
-            await _input.SendKeyAsync(InputKey.Space, ct);
         
-            if (i < spaceCount - 1)
-            {
-                int delay = random.Next(20, 61);
-                _logger.LogDebug("🔥 Delay between space: {Delay}ms", delay);
-                await Task.Delay(delay, ct);
-            }
+        if (i < spaceCount - 1)
+        {
+            int delay = _random.Next(
+                _options.Timing.BetweenHookDelayMinMs,
+                _options.Timing.BetweenHookDelayMaxMs);
+            _logger.LogDebug("🔥 Delay between space: {Delay}ms", delay);
+            await Task.Delay(delay, ct);
         }
-
-        _logger.LogInformation("🔥 HandleHookAsync DONE");
     }
+
+    _logger.LogInformation("🔥 HandleHookAsync DONE");
+}
 }
