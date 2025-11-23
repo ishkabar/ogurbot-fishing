@@ -6,6 +6,7 @@ using System;
 using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Options;
 using Microsoft.Extensions.DependencyInjection;
 using Ogur.Abstractions;
 using Ogur.Abstractions.Metin;
@@ -18,6 +19,7 @@ using Ogur.Fishing.Host.Wpf.ViewModels;
 using Ogur.Fishing.Host.Wpf.Views;
 using Ogur.Infrastructure.Signals;
 using Ogur.Infrastructure.configuration;
+using Ogur.Abstractions.Memory;
 
 namespace Ogur.Fishing.Host.Wpf.Composition;
 
@@ -62,10 +64,27 @@ public static class ServiceCollectionExtensions
         IConfiguration cfg)
     {
         services.Configure<FishingOptions>(cfg.GetSection("Fishing"));
-
+        
         services.AddSingleton<IEventBus, InMemoryEventBus>();
         services.AddSingleton<ISelectedProcessAccessor, SelectedProcessAccessorAdapter>();
-        services.AddSingleton<IFishingSignalSource, MemoryBiteSignalSource>();  
+        //services.AddSingleton<IFishingSignalSource, MemoryBiteSignalSource>();
+        services.AddSingleton<IFishingSignalSource>(sp =>
+    {
+        var logger = sp.GetRequiredService<ILogger<MemoryBiteSignalSource>>();
+        var mem = sp.GetRequiredService<IProcessMemoryReader>();
+        var processAccessor = sp.GetRequiredService<ISelectedProcessAccessor>();
+        var fishingOptions = sp.GetRequiredService<IOptions<FishingOptions>>();
+        var chatDetector = sp.GetService<IChatBufferDetector>();
+        var session = sp.GetRequiredService<ISessionState>();
+        
+        return new MemoryBiteSignalSource(
+            logger,
+            mem,
+            processAccessor,
+            fishingOptions,
+            chatDetector,
+            addr => session.MemoryAddress = addr);
+    });  
 
 
         services.AddSingleton<FishingCapability>();

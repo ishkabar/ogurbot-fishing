@@ -10,8 +10,10 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using Microsoft.Extensions.Logging;
 using Ogur.Abstractions;
+using Ogur.Abstractions.Metin;
 using Ogur.Abstractions.Events;
 using Ogur.Capabilities.Fishing;
+using Ogur.Infrastructure.Signals;
 using Ogur.Fishing.Host.Wpf.Services;
 using Ogur.Fishing.Host.Wpf.Services.Models;
 
@@ -60,66 +62,42 @@ public sealed partial class MainViewModel : ObservableObject
 
         BaitItems = new ObservableCollection<BaitOption>(_baits.GetAll());
         Events = new ObservableCollection<string>();
-        
-        _session.MemoryAddress = 0x0CCF203E;
+
+
         _logger.LogInformation("Default memory address set: 0x{Addr:X}", _session.MemoryAddress);
 
-        ParseAndSetMemoryAddress(_memoryAddress);
 
-        
         _ = ConsumeEventsAsync(_cts.Token);
         _ = RefreshProcessesAsync();
     }
 
-    [ObservableProperty]
-    private bool _isFishing;
+    [ObservableProperty] private bool _isFishing;
 
-    [ObservableProperty]
-    private string _status = "Stopped";
+    [ObservableProperty] private string _status = "Stopped";
 
-    [ObservableProperty]
-    private BaitOption? _selectedBait;
+    [ObservableProperty] private BaitOption? _selectedBait;
 
-    [ObservableProperty]
-    private ProcessOption? _selectedProcess;
+    [ObservableProperty] private ProcessOption? _selectedProcess;
 
-    [ObservableProperty]
-    private string _memoryAddress = "0x0CCF203E";
+    [ObservableProperty] private string _detectedAddress = "Not detected";
 
-    private void ParseAndSetMemoryAddress(string value)
+    [ObservableProperty] private bool _isDetecting;
+
+    [ObservableProperty] private int _detectionProgress;
+
+    [ObservableProperty] private string _detectionStatus = "";
+    
+    [ObservableProperty] private bool _hasDetectedAddress;
+    
+    [ObservableProperty] private bool _isRefreshing;
+
+    partial void OnDetectedAddressChanged(string value)
     {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            _session.MemoryAddress = 0;
-            _logger.LogWarning("Memory address cleared");
-            return;
-        }
-    
-        // Remove "0x" prefix
-        var hexString = value.Replace("0x", "").Replace("0X", "").Trim();
-    
-        if (long.TryParse(hexString, System.Globalization.NumberStyles.HexNumber, null, out long addr))
-        {
-            _session.MemoryAddress = addr;
-            _logger.LogInformation("Memory address set: 0x{Addr:X} ({Addr} decimal)", addr, addr);
-        }
-        else
-        {
-            _logger.LogWarning("Invalid hex address format: '{Value}'", value);
-            _session.MemoryAddress = 0;
-        }
+        HasDetectedAddress = !string.IsNullOrEmpty(value) && value != "Not detected";
+        DetectCommand.NotifyCanExecuteChanged();
+        StartCommand.NotifyCanExecuteChanged();
     }
-    
-    partial void OnMemoryAddressChanged(string value)
-    {
-        var hexString = value.Replace("0x", "").Replace("0X", "").Trim();
-    
-        if (long.TryParse(hexString, System.Globalization.NumberStyles.HexNumber, null, out long addr))
-        {
-            _session.MemoryAddress = addr;
-            _logger.LogInformation("Memory address updated: 0x{Addr:X}", addr);
-        }
-    }
+
 
     /// <summary>
     /// Gets the collection of fishing events displayed in the UI.
@@ -145,12 +123,14 @@ public sealed partial class MainViewModel : ObservableObject
     partial void OnSelectedProcessChanged(ProcessOption? value)
     {
         _session.SelectedProcess = value;
+        DetectCommand.NotifyCanExecuteChanged();
         StartCommand.NotifyCanExecuteChanged();
     }
 
     partial void OnSelectedBaitChanged(BaitOption? value)
     {
         _session.SelectedBait = value;
+        StartCommand.NotifyCanExecuteChanged();
     }
 
     /// <summary>
@@ -219,7 +199,11 @@ public sealed partial class MainViewModel : ObservableObject
     /// Determines whether the Start command can execute.
     /// </summary>
     /// <returns>True if fishing can be started; otherwise false.</returns>
-    private bool CanStart() => !IsFishing && SelectedProcess is not null;
+    private bool CanStart() => 
+        !IsFishing && 
+        SelectedProcess is not null && 
+        SelectedBait is not null &&
+        HasDetectedAddress;
 
     /// <summary>
     /// Determines whether the Stop command can execute.
@@ -230,13 +214,88 @@ public sealed partial class MainViewModel : ObservableObject
     /// <summary>
     /// Test command for debugging UI interactions.
     /// </summary>
-    [RelayCommand]
-    private void Test()
+    [RelayCommand(CanExecute = nameof(CanDetect))]
+    private async Task DetectAsync()
     {
-        Events.Add($"🧪 TEST @ {DateTime.Now:HH:mm:ss}");
-        _logger.LogInformation("Test command executed");
-    }
+        try
+        {
+            IsDetecting = true;
+            DetectionProgress = 0;
+            DetectionStatus = "Opening process...";
+        
+            _eventBus.Publish("detection.start", "Starting chat buffer detection");
 
+            var signalSource = _sp.GetRequiredService<IFishingSignalSource>() as MemoryBiteSignalSource;
+        
+            if (signalSource is null)
+            {
+                _eventBus.Publish("detection.error", "MemoryBiteSignalSource not available");
+                return;
+            }
+
+            // Symuluj postęp
+            var progressTask = Task.Run(async () =>
+            {
+                // Snapshots: 0-60%
+                for (int i = 0; i <= 60; i++)
+                {
+                    DetectionProgress = i;
+                    DetectionStatus = $"Taking snapshots ({i}/60)...";
+                    await Task.Delay(50);
+                }
+
+                // Analyzing: 60-85%
+                for (int i = 60; i <= 85; i++)
+                {
+                    DetectionProgress = i;
+                    DetectionStatus = "Analyzing changes...";
+                    await Task.Delay(25);
+                }
+
+                // Validating: 85-95%
+                for (int i = 85; i <= 95; i++)
+                {
+                    DetectionProgress = i;
+                    DetectionStatus = "Validating regions...";
+                    await Task.Delay(100);
+                }
+            });
+
+            // Wywołaj detection - TO trwa ~6-7 sekund
+            _ = await signalSource.WaitForBiteAsync(TimeSpan.FromSeconds(1), _cts.Token);
+
+            // Poczekaj na progress task
+            await progressTask;
+
+            // Teraz dopiero 100%
+            DetectionProgress = 100;
+            DetectionStatus = "Complete!";
+
+            _eventBus.Publish("detection.complete", "Chat buffer detected");
+
+            if (_session.MemoryAddress != 0)
+            {
+                DetectedAddress = $"0x{_session.MemoryAddress:X8}";
+                _eventBus.Publish("detection.address", $"Address: 0x{_session.MemoryAddress:X8}");
+            }
+
+            await Task.Delay(800);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Detection failed");
+            _eventBus.Publish("detection.error", ex.Message);
+            DetectionStatus = "Failed!";
+        }
+        finally
+        {
+            IsDetecting = false;
+        }
+    }
+    private bool CanDetect() => 
+        !HasDetectedAddress && 
+        SelectedProcess is not null && 
+        !IsFishing;
     /// <summary>
     /// Refreshes the list of available game processes.
     /// </summary>
@@ -246,9 +305,13 @@ public sealed partial class MainViewModel : ObservableObject
     {
         try
         {
+        IsRefreshing = true;
+        
             Processes.Clear();
-            var candidates = await _processes.GetCandidatesAsync(CancellationToken.None);
+            SelectedProcess = null;
             
+            var candidates = await _processes.GetCandidatesAsync(CancellationToken.None);
+
             foreach (var process in candidates)
             {
                 Processes.Add(process);
@@ -256,20 +319,26 @@ public sealed partial class MainViewModel : ObservableObject
 
             if (Processes.Count > 0)
             {
-                SelectedProcess = Processes[0];
+                //SelectedProcess = Processes[0];
                 _logger.LogInformation("Found {Count} game process(es)", Processes.Count);
             }
             else
             {
                 _logger.LogWarning("No game processes found");
-                Events.Add("No game processes detected");
+                _eventBus.Publish("process.scan", "No game processes detected");
             }
+            
+            await Task.Delay(300);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to refresh processes");
-            Events.Add($"Failed to scan processes: {ex.Message}");
+            _eventBus.Publish("process.error", $"Failed to scan: {ex.Message}");
         }
+        finally
+    {
+        IsRefreshing = false;
+    }
     }
 
     /// <summary>
@@ -286,6 +355,11 @@ public sealed partial class MainViewModel : ObservableObject
                 var timestamp = e.Timestamp.ToLocalTime().ToString("HH:mm:ss");
                 Events.Add($"[{timestamp}] {e.Type}: {e.Message}");
                 Status = _fishing.Status.ToString();
+
+                /*if (_session.MemoryAddress != 0)
+                {
+                    DetectedAddress = $"0x{_session.MemoryAddress:X8}";
+                }*/
             }
         }
         catch (OperationCanceledException)

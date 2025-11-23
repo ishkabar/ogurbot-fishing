@@ -36,35 +36,70 @@ public sealed partial class ServerSelectViewModel : ObservableObject
     /// <summary>
     /// Gets the list of available servers to choose from.
     /// </summary>
-    public ObservableCollection<ServerOption> Servers { get; } = new();
+    //public ObservableCollection<ServerOption> Servers { get; } = new();
+    public ObservableCollection<ServerOption> EnabledServers { get; } = new();
+    public ObservableCollection<ServerOption> DisabledServers { get; } = new();
 
     /// <summary>
     /// Initializes a new instance of the <see cref="ServerSelectViewModel"/> class.
     /// </summary>
     public ServerSelectViewModel(ISessionState session, INavigationService nav)
-    {
-        _session = session;
-        _nav = nav;
-        Servers.Add(new ServerOption(
-            Id: "proxima",
-            Name: "Proxima",
-            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/proxima.png"));
+{
+    _session = session;
+    _nav = nav;
 
-        Servers.Add(new ServerOption(
-            Id: "tamidia2",
-            Name: "Tamidia2 S2",
-            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/tamidia2.png"));
-            
-            // TODO: AUTO SELECT FIRST SERVER ON STARTUP
-        _ = Task.Run(async () =>
-        {
-            await Task.Delay(500);
-            if (Servers.Count > 0)
-            {
-                Application.Current.Dispatcher.Invoke(() => SelectServer(Servers[0]));
-            }
-        });
+    var servers = new List<ServerOption>
+    {
+        new(Id: "proxima", Name: "Proxima", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/proxima.png",
+            IsVisible: true, IsEnabled: true),
+        
+        new(Id: "tamidia2", Name: "Tamidia2 S2", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/tamidia2.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "glador", Name: "Glador", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/glador.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "glevia2", Name: "Glevia2", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/glevia2.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "monastyr2", Name: "Monastyr2", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/monastyr2.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "mt2009", Name: "MT2009", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/mt2009.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "pandora", Name: "Pandora", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/pandora.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "projekthard", Name: "Projekt Hard", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/projekthard.png",
+            IsVisible: true, IsEnabled: false),
+        
+        new(Id: "senthia", Name: "Senthia", 
+            IconPath: "pack://application:,,,/Ogur.Fishing.Host.Wpf;component/Assets/Servers/senthia.png",
+            IsVisible: true, IsEnabled: false)
+    };
+
+    // Sort: enabled first (Proxima), then disabled alphabetically
+    var sorted = servers
+        .OrderByDescending(s => s.IsEnabled)
+        .ThenBy(s => s.Name);
+
+    foreach (var server in sorted)
+    {
+        if (server.IsEnabled)
+            EnabledServers.Add(server);
+        else
+            DisabledServers.Add(server);
     }
+}
 
     /// <summary>
     /// Selects the specified server option and raises a notification.
@@ -88,7 +123,7 @@ public sealed partial class ServerSelectViewModel : ObservableObject
             var currentTitle = Application.Current?.MainWindow?.Title;
             if (!string.IsNullOrWhiteSpace(currentTitle))
             {
-                var m = Regex.Match(currentTitle, @"^Ogur fishing - (?<user>.*?)(?: \(|$)");
+                var m = Regex.Match(currentTitle, @"^Ogur - Fishing Planet - (?<user>.*?)(?: \(|$)");
                 if (m.Success)
                 {
                     user = m.Groups["user"].Value.Trim();
@@ -100,13 +135,13 @@ public sealed partial class ServerSelectViewModel : ObservableObject
 
         string title;
         if (string.IsNullOrEmpty(user) && string.IsNullOrEmpty(server))
-            title = "Ogur fishing";
+            title = "Ogur - Fishing Planet";
         else if (!string.IsNullOrEmpty(user) && string.IsNullOrEmpty(server))
-            title = $"Ogur fishing - {user}";
+            title = $"Ogur - Fishing Planet - {user}";
         else if (string.IsNullOrEmpty(user) && !string.IsNullOrEmpty(server))
-            title = $"Ogur fishing ({server})";
+            title = $"Ogur - Fishing Planet ({server})";
         else
-            title = $"Ogur fishing - {user} ({server})";
+            title = $"Ogur - Fishing Planet - {user} ({server})";
 
         // Set title on UI thread (one-liner).
         Application.Current?.Dispatcher?.Invoke(() => { if (Application.Current?.MainWindow != null) Application.Current.MainWindow.Title = title; });

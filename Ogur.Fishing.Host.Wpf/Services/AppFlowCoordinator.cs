@@ -77,19 +77,19 @@ public sealed class AppFlowCoordinator : IAppFlowCoordinator,
                 {
                     if (string.IsNullOrEmpty(user))
                     {
-                        shell.Title = "Ogur fishing";
+                        shell.Title = "Ogur - Fishing Planet";
                     }
                     else
                     {
-                        shell.Title = $"Ogur fishing - {user}";
+                        shell.Title = $"Ogur - Fishing Planet - {user}";
                     }
                 }
                 // Fallback: just set MainWindow.Title if not the ShellWindow instance
                 else if (Application.Current?.MainWindow != null)
                 {
                     Application.Current.MainWindow.Title = string.IsNullOrEmpty(user)
-                        ? "Ogur fishing"
-                        : $"Ogur fishing - {user}";
+                        ? "Ogur - Fishing Planet"
+                        : $"Ogur - Fishing Planet - {user}";
                 }
             });
         }

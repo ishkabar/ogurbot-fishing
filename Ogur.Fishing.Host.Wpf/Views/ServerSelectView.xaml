@@ -6,47 +6,83 @@
              xmlns:vm="clr-namespace:Ogur.Fishing.Host.Wpf.ViewModels"
              mc:Ignorable="d"
              d:DataContext="{d:DesignInstance Type=vm:ServerSelectViewModel}">
-  <Grid Margin="24">
-    <Grid.RowDefinitions>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="6"/>
-      <RowDefinition Height="Auto"/>
-      <RowDefinition Height="16"/>
-      <RowDefinition Height="*"/>
-    </Grid.RowDefinitions>
 
-    <TextBlock Text="Choose your server" Style="{StaticResource TitleText}"/>
-    <TextBlock Grid.Row="2" Text="Pick the server you play on." Style="{StaticResource MutedText}"/>
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
 
-    <Border Grid.Row="4" Style="{StaticResource Card}">
-      <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
-        <ItemsControl ItemsSource="{Binding Servers}">
-          <ItemsControl.ItemsPanel>
-            <ItemsPanelTemplate>
-              <WrapPanel IsItemsHost="True"/>
-            </ItemsPanelTemplate>
-          </ItemsControl.ItemsPanel>
-          
-          <ItemsControl.ItemContainerStyle>
-            <Style TargetType="ContentPresenter">
-              <Setter Property="Margin" Value="10"/>
-            </Style>
-          </ItemsControl.ItemContainerStyle>
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="6" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="16" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
 
-          <ItemsControl.ItemTemplate>
-            <DataTemplate DataType="{x:Type vm:ServerOption}">
-              <Button Style="{StaticResource ServerCardButton}"
-                      Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
-                      CommandParameter="{Binding}"
-                      Tag="{Binding Name}">
-                <Image Source="{Binding IconPath}"
-                       Width="112" Height="112"
-                       Stretch="Uniform"/>
-              </Button>
-            </DataTemplate>
-          </ItemsControl.ItemTemplate>
-        </ItemsControl>
-      </ScrollViewer>
-    </Border>
-  </Grid>
+        <TextBlock Text="Choose your server" Style="{StaticResource TitleText}" />
+        <TextBlock Grid.Row="2" Text="Pick the server you play on." Style="{StaticResource MutedText}" />
+<Border Grid.Row="4" Style="{StaticResource Card}">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+            <!-- Enabled servers -->
+            <ItemsControl ItemsSource="{Binding EnabledServers}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel IsItemsHost="True"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="Margin" Value="10"/>
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+                
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ServerOption}">
+                        <Button Style="{StaticResource ServerCardButton}"
+                                Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Tag="{Binding Name}">
+                            <Image Source="{Binding IconPath}"
+                                   Width="100" Height="100"
+                                   Stretch="Uniform"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            
+            <!-- Disabled servers -->
+            <ItemsControl ItemsSource="{Binding DisabledServers}" Margin="0,20,0,0">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel IsItemsHost="True"/>
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                
+                <ItemsControl.ItemContainerStyle>
+                    <Style TargetType="ContentPresenter">
+                        <Setter Property="Margin" Value="10"/>
+                    </Style>
+                </ItemsControl.ItemContainerStyle>
+                
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate DataType="{x:Type vm:ServerOption}">
+                        <Button Style="{StaticResource ServerCardButtonDisabled}"
+                                Command="{Binding DataContext.SelectServerCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                CommandParameter="{Binding}"
+                                Tag="{Binding Name}"
+                                IsEnabled="False">
+                            <Image Source="{Binding IconPath}"
+                                   Width="80" Height="80"
+                                   Stretch="Uniform"/>
+                        </Button>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+    </ScrollViewer>
+</Border>
+    </Grid>
 </UserControl>

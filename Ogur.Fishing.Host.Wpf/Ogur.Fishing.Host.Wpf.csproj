@@ -10,8 +10,8 @@
   </PropertyGroup>
 
 <ItemGroup>
-  <PackageReference Include="Ogur.Abstractions" Version="0.2.14-alpha" />
-  <PackageReference Include="Ogur.Core"         Version="0.2.55-alpha" />
+  <PackageReference Include="Ogur.Abstractions" Version="0.2.20-alpha" />
+  <PackageReference Include="Ogur.Core"         Version="0.2.63-alpha" />
   <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
   <PackageReference Include="Microsoft.Extensions.Hosting" Version="8.0.2" />
   <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="8.0.2" />

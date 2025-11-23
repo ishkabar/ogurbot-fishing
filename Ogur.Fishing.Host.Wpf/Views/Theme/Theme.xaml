@@ -70,38 +70,73 @@
 
   <!-- ===== Buttons ===== -->
   <Style x:Key="PrimaryButton" TargetType="Button">
-    <Setter Property="Height" Value="38"/>
-    <Setter Property="MinWidth" Value="120"/>
-    <Setter Property="Padding" Value="16,6"/>
-    <Setter Property="Foreground" Value="White"/>
-    <Setter Property="Background" Value="{StaticResource Brush.Primary}"/>
-    <Setter Property="BorderBrush" Value="{StaticResource Brush.Primary}"/>
-    <Setter Property="BorderThickness" Value="1"/>
-    <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="Button">
-          <Border Background="{TemplateBinding Background}"
-                  BorderBrush="{TemplateBinding BorderBrush}"
-                  BorderThickness="{TemplateBinding BorderThickness}"
-                  CornerRadius="8">
-            <ContentPresenter HorizontalAlignment="Center"
-                              VerticalAlignment="Center"
-                              Margin="{TemplateBinding Padding}"/>
-          </Border>
-          <ControlTemplate.Triggers>
-            <Trigger Property="IsEnabled" Value="False">
-              <Setter Property="Opacity" Value="0.55"/>
-            </Trigger>
-            <Trigger Property="IsMouseOver" Value="True">
-              <Setter Property="Background" Value="{StaticResource Brush.PrimaryHover}"/>
-              <Setter Property="BorderBrush" Value="{StaticResource Brush.PrimaryHover}"/>
-            </Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
-  </Style>
+  <Setter Property="Height" Value="38"/>
+  <Setter Property="MinWidth" Value="120"/>
+  <Setter Property="Padding" Value="16,6"/>
+  <Setter Property="Foreground" Value="White"/>
+  <Setter Property="Background" Value="{StaticResource Brush.Primary}"/>
+  <Setter Property="BorderBrush" Value="{StaticResource Brush.Primary}"/>
+  <Setter Property="BorderThickness" Value="1"/>
+  <Setter Property="Cursor" Value="Hand"/>
+  <Setter Property="Template">
+    <Setter.Value>
+      <ControlTemplate TargetType="Button">
+        <Border x:Name="Border"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="8"
+                RenderTransformOrigin="0.5,0.5">
+          <Border.RenderTransform>
+            <ScaleTransform x:Name="Scale" ScaleX="1" ScaleY="1"/>
+          </Border.RenderTransform>
+          <ContentPresenter HorizontalAlignment="Center"
+                            VerticalAlignment="Center"
+                            Margin="{TemplateBinding Padding}"/>
+        </Border>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsEnabled" Value="False">
+            <Setter Property="Opacity" Value="0.55"/>
+          </Trigger>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter Property="Background" Value="{StaticResource Brush.PrimaryHover}"/>
+            <Setter Property="BorderBrush" Value="{StaticResource Brush.PrimaryHover}"/>
+          </Trigger>
+          <Trigger Property="IsPressed" Value="True">
+            <Trigger.EnterActions>
+              <BeginStoryboard>
+                <Storyboard>
+                  <DoubleAnimation Storyboard.TargetName="Scale"
+                                   Storyboard.TargetProperty="ScaleX"
+                                   To="0.95"
+                                   Duration="0:0:0.1"/>
+                  <DoubleAnimation Storyboard.TargetName="Scale"
+                                   Storyboard.TargetProperty="ScaleY"
+                                   To="0.95"
+                                   Duration="0:0:0.1"/>
+                </Storyboard>
+              </BeginStoryboard>
+            </Trigger.EnterActions>
+            <Trigger.ExitActions>
+              <BeginStoryboard>
+                <Storyboard>
+                  <DoubleAnimation Storyboard.TargetName="Scale"
+                                   Storyboard.TargetProperty="ScaleX"
+                                   To="1"
+                                   Duration="0:0:0.1"/>
+                  <DoubleAnimation Storyboard.TargetName="Scale"
+                                   Storyboard.TargetProperty="ScaleY"
+                                   To="1"
+                                   Duration="0:0:0.1"/>
+                </Storyboard>
+              </BeginStoryboard>
+            </Trigger.ExitActions>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate>
+    </Setter.Value>
+  </Setter>
+</Style>
 
   <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
     <Setter Property="Foreground" Value="{StaticResource Brush.Text}"/>
@@ -166,67 +201,71 @@
     <Setter Property="VirtualizingPanel.ScrollUnit" Value="Item"/>
   </Style>
 
-  <!-- ===== Server select ===== -->
-  <Style x:Key="ServerCardButton" TargetType="Button">
-    <Setter Property="Width" Value="220"/>
-    <Setter Property="Height" Value="220"/>
-    <Setter Property="Padding" Value="0"/>
-    <Setter Property="Background" Value="Transparent"/>
-    <Setter Property="BorderThickness" Value="0"/>
-    <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="Template">
-      <Setter.Value>
-        <ControlTemplate TargetType="Button">
-          <Border x:Name="Root"
-                  Background="{StaticResource Brush.BgElevated}"
-                  BorderBrush="#2A2F38"
-                  BorderThickness="1"
-                  CornerRadius="14"
-                  SnapsToDevicePixels="True"
-                  ClipToBounds="True">
-            <Grid>
-              <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="52"/>
-              </Grid.RowDefinitions>
+ <!-- ===== Server select - Enabled ===== -->
+<Style x:Key="ServerCardButton" TargetType="Button">
+  <Setter Property="Width" Value="200"/>
+  <Setter Property="Height" Value="200"/>
+  <Setter Property="Padding" Value="0"/>
+  <Setter Property="Background" Value="Transparent"/>
+  <Setter Property="BorderThickness" Value="0"/>
+  <Setter Property="Cursor" Value="Hand"/>
+  <Setter Property="Template">
+    <Setter.Value>
+      <ControlTemplate TargetType="Button">
+        <Border x:Name="Root"
+                Background="{StaticResource Brush.BgElevated}"
+                BorderBrush="#2A2F38"
+                BorderThickness="1"
+                CornerRadius="14"
+                SnapsToDevicePixels="True"
+                ClipToBounds="True">
+          <Grid>
+            <Grid.RowDefinitions>
+              <RowDefinition Height="*"/>
+              <RowDefinition Height="48"/>
+            </Grid.RowDefinitions>
 
-              <Border Grid.Row="0" Background="#151A22" CornerRadius="14,14,0,0">
-                <ContentPresenter HorizontalAlignment="Center"
-                                  VerticalAlignment="Center"
-                                  Margin="12"/>
-              </Border>
+            <Border Grid.Row="0" Background="#151A22" CornerRadius="14,14,0,0">
+              <ContentPresenter HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Margin="12"/>
+            </Border>
 
-              <Border Grid.Row="1" Background="#ECEFF4" CornerRadius="0,0,14,14">
-                <TextBlock Text="{TemplateBinding Tag}"
-                           Foreground="#1E1E1E"
-                           FontWeight="SemiBold"
-                           FontSize="14"
-                           HorizontalAlignment="Center"
-                           VerticalAlignment="Center"/>
-              </Border>
-            </Grid>
-          </Border>
+            <Border Grid.Row="1" Background="#ECEFF4" CornerRadius="0,0,14,14">
+              <TextBlock Text="{TemplateBinding Tag}"
+                         Foreground="#1E1E1E"
+                         FontWeight="SemiBold"
+                         FontSize="14"
+                         HorizontalAlignment="Center"
+                         VerticalAlignment="Center"/>
+            </Border>
+          </Grid>
+        </Border>
 
-          <ControlTemplate.Triggers>
-            <Trigger Property="IsMouseOver" Value="True">
-              <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.Primary}"/>
-              <Setter TargetName="Root" Property="Effect">
-                <Setter.Value>
-                  <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.45" Color="#000000"/>
-                </Setter.Value>
-              </Setter>
-            </Trigger>
-            <Trigger Property="IsPressed" Value="True">
-              <Setter TargetName="Root" Property="Background" Value="#202635"/>
-            </Trigger>
-            <Trigger Property="IsEnabled" Value="False">
-              <Setter Property="Opacity" Value="0.55"/>
-            </Trigger>
-          </ControlTemplate.Triggers>
-        </ControlTemplate>
-      </Setter.Value>
-    </Setter>
-  </Style>
+        <ControlTemplate.Triggers>
+          <Trigger Property="IsMouseOver" Value="True">
+            <Setter TargetName="Root" Property="BorderBrush" Value="{StaticResource Brush.Primary}"/>
+            <Setter TargetName="Root" Property="Effect">
+              <Setter.Value>
+                <DropShadowEffect BlurRadius="16" ShadowDepth="0" Opacity="0.45" Color="#000000"/>
+              </Setter.Value>
+            </Setter>
+          </Trigger>
+          <Trigger Property="IsPressed" Value="True">
+            <Setter TargetName="Root" Property="Background" Value="#202635"/>
+          </Trigger>
+        </ControlTemplate.Triggers>
+      </ControlTemplate>
+    </Setter.Value>
+  </Setter>
+</Style>
+
+<!-- ===== Server select - Disabled ===== -->
+<Style x:Key="ServerCardButtonDisabled" TargetType="Button" BasedOn="{StaticResource ServerCardButton}">
+  <Setter Property="Width" Value="160"/>
+  <Setter Property="Height" Value="160"/>
+  <Setter Property="Opacity" Value="0.55"/>
+</Style>
 
   <!-- ===================================================== -->
   <!-- COMBOBOX (DARK BASE) + FULL/LIST & SHORT/SELECT STYLE -->

@@ -26,7 +26,18 @@ public sealed partial class LoginViewModel : ObservableObject
     private readonly IMessenger _messenger;
     private bool _isClearing;
 
-
+/*
+    public LoginViewModel(
+        ILogger<LoginViewModel> logger,
+        IAuthService authService,
+        ILicenseValidator licenseValidator,
+        IMessenger messenger)
+    {
+        _logger = logger;
+        _authService = authService;
+        _licenseValidator = licenseValidator;
+        _messenger = messenger;
+    }*/
     public LoginViewModel(
         ILogger<LoginViewModel> logger,
         IAuthService authService,
@@ -49,7 +60,6 @@ public sealed partial class LoginViewModel : ObservableObject
             await LoginAsync(CancellationToken.None);
         });
     }
-
     [ObservableProperty] private string? _username;
 
     [ObservableProperty] private string? _password;
